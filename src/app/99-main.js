@@ -18,8 +18,9 @@ var QuickStart = (function () {
       body.appendChild(h('div', { class: 'qs-dots', 'aria-hidden': 'true' }, STEPS.map(function (s, k) { return h('span', { class: k === i ? 'on' : '' }); })));
     }
     draw();
+    // The flag is saved on the click itself; the dialog's close event can arrive after a fast reload.
     dlg = openDialog({ title: 'Quick start', body: body, onClose: function () { settings.set('quickDone', true); }, actions: [
-      { label: 'Skip' },
+      { label: 'Skip', onClick: function () { settings.set('quickDone', true); } },
       { label: 'Back', onClick: function () { if (i > 0) { i--; draw(); } return false; } },
       { label: 'Next', primary: true, onClick: function () { if (i < STEPS.length - 1) { i++; draw(); return false; } settings.set('quickDone', true); } }] });
   }

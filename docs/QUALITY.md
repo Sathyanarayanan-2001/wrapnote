@@ -44,7 +44,7 @@ Every check states its input and the expected result worked out by hand.
 | Lighthouse (gzip, as GitHub Pages serves it) | Performance 99, Accessibility 100, Best practices 100; first contentful paint 1.5 s; time to interactive 1.6 s; total blocking time 20 ms; layout shift 0.046 |
 | Appearance re-check by eye | 6 screens (read mode after the fix; phone 320 px editor, ribbon and dashboard in dark; settings; phone home); no new issues |
 
-All earlier tests were re-run after every change (regression rule). GitHub Actions re-runs methods A, B, D and E on every push and pull request.
+All earlier tests were re-run after every change (regression rule). GitHub Actions re-runs methods A, B, D and E on every push and pull request, which gives a third, independent environment; its first run found defect 10, and the full set was re-run after the fix (46 / 46, 110 / 110, 96 / 96, 5 / 5).
 
 ### Required scenario tests and where they are
 
@@ -113,6 +113,7 @@ Other measurements on the same document: page layout 4 to 6 ms; opening the docu
 | 7 | Appearance | Words split mid-word in table cells in read mode | `overflow-wrap: anywhere` shrinks table cells | `overflow-wrap: break-word`; keep headings with tables |
 | 8 | Browser test F34 | Some controls under 44 px on phones | Desktop sizes | 44 px minimum for every control on phones |
 | 9 | Appearance | Theme icon and colour swatch did not render | Glyph missing from the font; empty inline span | Inline SVG icon; inline-block swatch |
+| 10 | CI (browser test F1 on a GitHub runner) | Quick start could reappear after Skip if the page reloaded at once | The flag was saved in the dialog's close event, which runs a moment later | Save the flag in the Skip click itself |
 
 ### 5 Whys A: the polish missed a double space
 
@@ -177,7 +178,7 @@ The two highest remaining risks are day/month ambiguity in imported CSV files (R
 - **Define.** Goal: a Word replacement for live minutes, reports and study notes. Critical-to-quality items: exact money, correct dates and periods, no data loss, first load under 2 seconds on a mid-range phone, WCAG 2.2 AA contrast, 44 px touch targets, no network use with personal data.
 - **Measure.** Baselines: Lighthouse (performance 89 without compression, 99 with it), first contentful paint 3.0 s uncompressed and 1.4 s compressed, 91 of 95 browser checks on the first run.
 - **Analyse.** Root causes in section 6 (5 Whys A and C, fishbone B).
-- **Improve.** Nine fixes (section 6), each followed by a full regression run.
+- **Improve.** Ten fixes (section 6), each followed by a full regression run.
 - **Control.** GitHub Actions runs unit, browser, link and walkthrough tests on every push and pull request. The golden set guards rendering. A pull request merges into `main` only when the checks pass.
 
 ## 9. Stage checkpoints
