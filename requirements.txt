@@ -1,0 +1,5 @@
+# Python packages for the browser tests. Exact versions only.
+playwright==1.63.0
+# Node packages are pinned in package.json and package-lock.json:
+#   @fontsource/ibm-plex-sans==5.2.8 (development only; embedded into the build)
+# The app itself has no runtime dependencies.

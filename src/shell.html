@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta http-equiv="Content-Security-Policy" content="{{CSP}}">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="WrapNote: live minutes of meeting, formal reports and study notes in your browser. Offline, private, no account.">
+<meta name="theme-color" content="#f8fafc">
+<title>WrapNote</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>{{FONTS}}</style>
+<style>{{APP_CSS}}</style>
+<style id="doc-css">{{DOC_CSS}}</style>
+<style id="print-page-style"></style>
+</head>
+<body data-page="home">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="#home" aria-label="WrapNote home"><span class="logo" aria-hidden="true">W</span><span>WrapNote</span></a>
+  <nav class="tabs" aria-label="Main">
+    <a href="#home" data-nav="home">Home</a>
+    <a href="#docs" data-nav="docs">Documents</a>
+    <a href="#edit" data-nav="edit">Editor</a>
+    <a href="#dash" data-nav="dash">Dashboard</a>
+    <a href="#guide" data-nav="guide">Guide</a>
+    <a href="#settings" data-nav="settings">Settings</a>
+  </nav>
+  <span class="spacer"></span>
+  <button id="syncPill" class="sync-pill ok" type="button"><span class="dot" aria-hidden="true"></span><span class="txt">Saved on this device</span></button>
+  <button id="themeBtn" class="icon-btn" type="button" aria-label="Switch light or dark theme" title="Switch light or dark theme"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 2.5a7.5 7.5 0 0 1 0 15z" fill="currentColor"/></svg></button>
+</header>
+
+<main id="main" tabindex="-1">
+<!-- HOME -->
+<section id="page-home" class="page">
+  <div class="hero">
+    <h1>Never start from a blank page again</h1>
+    <p class="lead">WrapNote turns a few guided fields into finished minutes of meeting, formal reports and memorable study notes. It works like Word, saves every word as you type, runs offline and keeps your documents on your own devices.</p>
+    <div class="hero-actions">
+      <button type="button" class="btn primary big" data-new="mom">New minutes</button>
+      <button type="button" class="btn big" data-new="book">New study notes</button>
+      <button type="button" class="btn big ghost" data-new="blank">Blank document</button>
+    </div>
+  </div>
+  <div class="home-grid">
+    <section class="card">
+      <h2>Recent documents</h2>
+      <div id="homeRecent" class="recent"></div>
+    </section>
+    <section class="card">
+      <h2>Go to</h2>
+      <ul class="link-list">
+        <li><a href="#docs">Documents</a> <span>search, filter, duplicate and delete</span></li>
+        <li><a href="#edit">Editor</a> <span>guided fields, blocks and the Word-style ribbon</span></li>
+        <li><a href="#dash">Dashboard</a> <span>documents, words and action items at a glance</span></li>
+        <li><a href="#guide">Guide</a> <span>how every feature works, with a worked example</span></li>
+        <li><a href="#settings">Settings</a> <span>theme, sync folder, backup and error log</span></li>
+      </ul>
+    </section>
+    <section class="card">
+      <h2>Private by design</h2>
+      <p>No account, no tracking and no uploads. Documents live in this browser. Optional sync writes to a folder you choose, such as OneDrive.</p>
+      <button type="button" class="btn" id="loadExample2">Open the worked example</button>
+    </section>
+  </div>
+</section>
+
+<!-- DOCUMENTS -->
+<section id="page-docs" class="page" hidden>
+  <div class="page-head">
+    <h1>Documents</h1>
+    <div class="head-actions">
+      <button type="button" class="btn primary" data-new="mom">New minutes</button>
+      <button type="button" class="btn" data-new="book">New study notes</button>
+      <button type="button" class="btn ghost" data-new="blank">Blank</button>
+    </div>
+  </div>
+  <div class="filters">
+    <input id="docSearch" type="search" placeholder="Search titles and categories" aria-label="Search documents">
+    <select id="docMode" aria-label="Type"><option value="">All types</option><option value="mom">Minutes and reports</option><option value="book">Study notes</option><option value="blank">Blank</option></select>
+    <select id="docStatusF" aria-label="Status"><option value="">Any status</option><option value="draft">Draft</option><option value="final">Final</option></select>
+    <select id="docSort" aria-label="Sort by"><option value="updated">Last edited</option><option value="date">Document date</option><option value="title">Title</option><option value="words">Word count</option></select>
+  </div>
+  <p id="docCount" class="hint"></p>
+  <div class="table-wrap">
+    <table class="data-table docs-table cards-on-phone">
+      <thead><tr><th scope="col">Title</th><th scope="col">Type</th><th scope="col">Category</th><th scope="col" class="num">Date</th><th scope="col" class="num">Words</th><th scope="col">Status</th><th scope="col"><span class="sr">Actions</span></th></tr></thead>
+      <tbody id="docRows"></tbody>
+    </table>
+  </div>
+  <p id="docEmpty" class="empty" hidden></p>
+  <datalist id="catList"></datalist>
+</section>
+
+<!-- EDITOR -->
+<section id="page-edit" class="page" hidden>
+  <div id="edEmpty" class="ed-empty">
+    <h1>Editor</h1>
+    <p class="empty">No document is open. Start a new one, or pick one from Documents.</p>
+    <div class="hero-actions">
+      <button type="button" class="btn primary" data-new="mom">New minutes</button>
+      <button type="button" class="btn" data-new="book">New study notes</button>
+      <a class="btn ghost" href="#docs">Open a document</a>
+      <span id="edEmptyLast"></span>
+    </div>
+  </div>
+  <div id="editor" class="editor" hidden>
+    <div class="ed-bar">
+      <button id="edBack" type="button" class="btn ghost sm" aria-label="Back to documents">← Docs</button>
+      <h1 class="sr">Editor</h1>
+      <input id="edTitle" class="ed-title" type="text" aria-label="Document title" placeholder="Untitled" maxlength="300">
+      <input id="edCat" class="ed-cat" type="text" list="catList" aria-label="Category" placeholder="Category" maxlength="60">
+      <span id="edStatus" class="chip">Draft</span>
+      <span id="saveState" class="hint save-state" aria-live="polite"></span>
+      <span class="spacer"></span>
+      <button id="undoBtn" type="button" class="icon-btn" aria-label="Undo (Ctrl+Z)" title="Undo (Ctrl+Z)">↶</button>
+      <button id="redoBtn" type="button" class="icon-btn" aria-label="Redo (Ctrl+Y)" title="Redo (Ctrl+Y)">↷</button>
+      <button id="saveAsBtn" type="button" class="btn sm">Save to different location…</button>
+      <select id="exportSel" class="btn sm" aria-label="Export">
+        <option value="">Export ▾</option><option value="pdf">PDF / print</option><option value="doc">Word (.doc)</option><option value="html">Web page (.html)</option>
+        <option value="md">Markdown (.md)</option><option value="txt">Plain text (.txt)</option><option value="csv">Action items (.csv)</option><option value="json">WrapNote file (.json)</option><option value="saveas">Save to different location…</option>
+      </select>
+      <button id="confirmEndBtn" type="button" class="btn primary sm">Confirm end of document</button>
+    </div>
+    <div id="finalBanner" class="banner ok" hidden>
+      <strong>Final review.</strong> Editing is locked. Export the finished document, or reopen it.
+      <button type="button" class="btn sm" data-export="pdf">PDF</button>
+      <button type="button" class="btn sm" data-export="doc">Word</button>
+      <button type="button" class="btn sm" data-export="html">HTML</button>
+      <button type="button" class="btn sm" id="reopenBtn">Reopen for editing</button>
+    </div>
+    <div id="lockBanner" class="banner warn" hidden><span id="lockBannerText"></span> <button type="button" class="btn sm" id="lockBannerBtn">Unlock</button></div>
+    <div id="ribbon" class="ribbon">
+      <div class="rb-tabs" role="tablist" aria-label="Ribbon"></div>
+      <div class="rb-panel" id="rbPanel" role="tabpanel"></div>
+    </div>
+    <div id="phoneSwitch" class="seg phone-switch" role="group" aria-label="Show">
+      <button type="button" class="seg-btn active" data-pane="intake" aria-pressed="true">Fields &amp; blocks</button>
+      <button type="button" class="seg-btn" data-pane="doc" aria-pressed="false">Document</button>
+    </div>
+    <div id="edBody" class="ed-body" data-phone="intake">
+      <aside id="intake" class="intake" aria-label="Guided fields and blocks"></aside>
+      <aside id="navPane" class="navpane" aria-label="Navigation pane" hidden></aside>
+      <div id="canvas" class="canvas">
+        <div id="rulerH" class="ruler-h" hidden></div>
+        <div id="canvasScroll" class="canvas-scroll">
+          <div id="rulerV" class="ruler-v" hidden></div>
+          <div id="zoomWrap" class="zoom-wrap">
+            <div id="zoomer" class="zoomer">
+              <div id="sheet" class="sheet">
+                <div id="sheetBg" class="sheet-bg" aria-hidden="true"></div>
+                <div id="docEl" class="doc-content" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true" aria-label="Document page"></div>
+                <div id="sheetFg" class="sheet-fg" aria-hidden="true"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="splitPane" class="splitpane" hidden></div>
+      <aside id="sidePanel" class="sidepanel" aria-label="Side panel" hidden></aside>
+    </div>
+    <footer class="statusbar">
+      <span id="stPage" class="num">Page 1 of 1</span><span id="stWords" class="num"></span><span id="stChars" class="num"></span><span id="stParas" class="num"></span>
+      <span id="stTrack" class="st-track">Tracking off</span>
+    </footer>
+  </div>
+  <button id="focusExit" type="button" class="btn focus-exit">Exit focus (Esc)</button>
+</section>
+
+<!-- DASHBOARD -->
+<section id="page-dash" class="page" hidden>
+  <div class="page-head"><h1>Dashboard</h1><button type="button" class="btn" id="csvAll">Export all action items (.csv)</button></div>
+  <div id="kpis" class="kpis"></div>
+  <p id="dashEmpty" class="empty" hidden>Charts appear once you have documents. Choose "New minutes" on Home to create the first one.</p>
+  <div id="dashCharts" class="dash-grid"></div>
+</section>
+
+<!-- GUIDE -->
+<section id="page-guide" class="page guide" hidden>
+  <h1>Guide</h1>
+  <nav class="toc-guide" aria-label="Guide contents">
+    <a href="#g-start">Getting started</a><a href="#g-left">Left pane</a><a href="#g-ribbon">Ribbon</a><a href="#g-final">Finishing</a><a href="#g-keys">Shortcuts</a><a href="#g-sync">Sync</a><a href="#g-io">Import and export</a><a href="#g-example">Worked example</a><a href="#g-privacy">Privacy</a><a href="#g-limits">Limits</a><a href="#g-help">Troubleshooting</a>
+  </nav>
+  <section id="g-start" class="card"><h2>Getting started</h2>
+    <ol>
+      <li>Open Home.</li>
+      <li>Choose <strong>New minutes</strong> (or <strong>New study notes</strong>).</li>
+      <li>Type in the fields on the left. The page on the right fills in as you type.</li>
+      <li>Add text, tables, pictures or screenshots with <strong>Add content blocks</strong>.</li>
+      <li>Format with the ribbon, just as in Word.</li>
+      <li>Choose <strong>Confirm end of document</strong> when the meeting or reading is over.</li>
+      <li>Export to PDF, Word or HTML from the green banner.</li>
+    </ol>
+    <p>Every word is saved in this browser about half a second after you stop typing. There is no Save button to remember.</p>
+    <button type="button" class="btn" id="quickReset">Show the quick start again</button>
+  </section>
+  <section id="g-left" class="card"><h2>Left pane: guided fields and blocks</h2>
+    <h3>Modes</h3>
+    <ul>
+      <li><strong>Minutes &amp; report</strong>: title, date, time from and to, location or link, host, scribe, purpose, people present and absent, agenda, decisions, action items (task, owner, due date, cost) and next meeting.</li>
+      <li><strong>Book &amp; study notes</strong>: title, author, chapter or pages, date, core thesis, concepts (one "Term: definition" per line), quotes with page numbers, a mind map (indent with two spaces), active-recall questions and takeaways.</li>
+      <li><strong>Blank</strong>: no fields; type straight onto the page.</li>
+    </ul>
+    <p>Dates are typed day first (28/10/2026, or 28/10 for this year). Times are 24-hour (17:30). The week (CW44), month and financial year (FY 2026-27) are worked out from the date. A meeting from 23:30 to 00:45 is shown as 1 h 15 min, ending the next day.</p>
+    <p>The title and the purpose (or thesis) can also be edited directly on the page; the field on the left follows.</p>
+    <h3>Corporate branding</h3>
+    <p>In minutes mode, open <strong>Office / corporate branding</strong> to add a logo (left, centre or right), header and footer text, a page border and standard fonts.</p>
+    <h3>Content blocks</h3>
+    <ul>
+      <li><strong>Text &amp; labels</strong>: type in the box; the block appears on the page as you type. Toggle bold, centre, highlight or a callout box, and add labels.</li>
+      <li><strong>Images</strong>: click, drop, or select the box and press Ctrl+V. With several pictures you choose 2×2 grid, 3-column grid, side by side, or stacked.</li>
+      <li><strong>Screenshots</strong>: choose extract text, insert as image, or both. Several screenshots can go in a grid, side by side, or one by one.</li>
+      <li><strong>Smart table</strong>: set rows, columns, style and header options before it is inserted.</li>
+    </ul>
+    <p>The block list lets you move blocks up or down, edit, format or delete them. The page updates at once.</p>
+  </section>
+  <section id="g-ribbon" class="card"><h2>The ribbon</h2>
+    <dl class="guide-dl">
+      <dt>Home</dt><dd>Cut, copy, paste, format painter; font, size (A⁺ / A⁻), bold, italic, underline, sub- and superscript, change case, highlight and font colour; lists (including multilevel), indent, alignment, line spacing, shading and borders; styles (Normal, Title, Subtitle, Heading 1–4, Quote, Label) and custom labels; find, replace, select and spell check. Choose "Import font…" in the font list to add a .ttf, .otf or .woff file.</dd>
+      <dt>Insert</dt><dd>Cover pages, blank page, page break; tables and table tools (rows, columns, merge, split, shading, borders); pictures, shapes, charts with a data editor; links and comments; header, footer and page numbers ("Page X of Y", top, bottom or margin); text boxes, signature line, date and time, equations and symbols.</dd>
+      <dt>Design &amp; layout</dt><dd>Page borders, page colour, watermark (text or picture); margins, orientation, size (A4, Letter, Legal, A5), columns and breaks; paragraph indents and spacing; wrap text and position for pictures, shapes, charts and text boxes.</dd>
+      <dt>References</dt><dd>Table of contents from headings, labels, or captions, updating automatically or on demand; numbered captions (Figure 1, Table 1, Equation 1); footnotes shown at the bottom of their page.</dd>
+      <dt>Review</dt><dd>Spelling and grammar panel, word count; comments with previous and next; track changes with your name and the time on every change, accept or reject one or all; save revisions and compare two of them inline or side by side; read-only or password lock.</dd>
+      <dt>View</dt><dd>Print layout, read mode, outline, focus mode and immersive reader; navigation pane and rulers; zoom with 100%, one page, multiple pages and page width; new window, split view, arrange all, and side by side.</dd>
+    </dl>
+  </section>
+  <section id="g-final" class="card"><h2>Finishing a document</h2>
+    <ol>
+      <li>Choose <strong>Confirm end of document</strong>.</li>
+      <li>Keep "Polish the text" and "Add a summary" ticked, or untick them.</li>
+      <li>Choose <strong>Confirm end of document</strong> again.</li>
+      <li>Export from the green banner: PDF, Word or HTML.</li>
+      <li>To change anything later, choose <strong>Reopen for editing</strong>.</li>
+    </ol>
+    <p>The polish runs on this device with fixed rules: one space between words, no space before punctuation, a capital letter at the start of each sentence, and no repeated words. It does not reword your text.</p>
+  </section>
+  <section id="g-keys" class="card"><h2>Keyboard shortcuts</h2>
+    <table class="data-table"><tbody>
+      <tr><th scope="row">Ctrl+B / I / U</th><td>Bold, italic, underline</td></tr>
+      <tr><th scope="row">Ctrl+Z, Ctrl+Y</th><td>Undo, redo</td></tr>
+      <tr><th scope="row">Ctrl+F, Ctrl+H</th><td>Find, replace</td></tr>
+      <tr><th scope="row">Ctrl+Enter</th><td>Page break</td></tr>
+      <tr><th scope="row">Ctrl+S</th><td>Save now (it also saves by itself)</td></tr>
+      <tr><th scope="row">Tab, Shift+Tab</th><td>List level down or up; next or previous table cell</td></tr>
+      <tr><th scope="row">Esc</th><td>Leave focus mode or close a reading view</td></tr>
+    </tbody></table>
+  </section>
+  <section id="g-sync" class="card"><h2>Sync between devices</h2>
+    <ol>
+      <li>Open Settings on your computer.</li>
+      <li>Choose <strong>Choose sync folder</strong> and pick a folder inside OneDrive.</li>
+      <li>Repeat on your other computer with the same OneDrive folder.</li>
+    </ol>
+    <p>Each session writes one compressed save file about 3 seconds after a change, and when you switch away from the tab. Each device keeps its newest 3 files. Documents are merged one by one: the newer edit wins, and deletions reach the other devices. The status at the top right always shows Saved, Saving, Changes waiting, Folder access needed or Sync problem.</p>
+    <p>Phones cannot open folders in the browser. On a phone, use Settings, Export backup and Import backup.</p>
+  </section>
+  <section id="g-io" class="card"><h2>Import and export</h2>
+    <ul>
+      <li><strong>Export</strong> a document as PDF, Word (.doc), HTML, Markdown, plain text, action-item CSV, or a WrapNote file.</li>
+      <li><strong>Action items CSV</strong> uses UTF-8 with a byte order mark so Excel shows ₹ correctly. Amounts use lakh grouping (1,23,456.78).</li>
+      <li><strong>Import action items</strong> from a CSV in the Action items field. WrapNote finds the header row even after title lines, matches columns such as "Assignee" or "Deadline", and shows every row as Ready or Skipped with the reason. Nothing is saved until you press Import.</li>
+      <li><strong>Backup</strong> in Settings exports every document as one .json file. Importing shows what is new, newer, older or the same before anything changes.</li>
+    </ul>
+  </section>
+  <section id="g-example" class="card"><h2>Worked example</h2>
+    <p><strong>Input</strong> (all names are made up):</p>
+    <table class="data-table"><tbody>
+      <tr><th scope="row">Date, time</th><td>28/10/2026, 23:30 to 00:45</td></tr>
+      <tr><th scope="row">People</th><td>Present: A. Rao, K. Iyer, M. Das. Absent: P. Sen</td></tr>
+      <tr><th scope="row">Actions</th><td>"Update the plan", K. Iyer, due 04/11/2026, cost 12,500.50; "Book the venue", M. Das, due 02/11/2026, cost 7,499.50, done</td></tr>
+    </tbody></table>
+    <p><strong>Expected output</strong> on the page:</p>
+    <ul>
+      <li>Date line: <code>28/10/2026 (Wed) · CW44 · FY 2026-27</code></li>
+      <li>Time line: <code>23:30–00:45 (1 h 15 min, ends next day)</code></li>
+      <li>Attendance: <code>Present (3)</code> and <code>Absent (1)</code></li>
+      <li>Action table sorted by due date: "Book the venue" first, then "Update the plan"</li>
+      <li>Total cost: 12,500.50 + 7,499.50 = <code>₹20,000.00</code></li>
+      <li>Dashboard: 1 open action, 1 done, cost ₹20,000.00 in FY 2026-27</li>
+    </ul>
+    <button type="button" class="btn primary" id="loadExample">Create this example now</button>
+  </section>
+  <section id="g-privacy" class="card"><h2>Privacy</h2>
+    <p>WrapNote has no account, no analytics and no server. It makes no network calls with your data. Documents are stored in this browser's IndexedDB. Sync only writes to the folder you choose. Clearing your browser's site data deletes local documents, so keep a backup or a sync folder.</p>
+  </section>
+  <section id="g-limits" class="card"><h2>Known limits</h2>
+    <ul>
+      <li>Text extraction (OCR) uses the browser's built-in text detector, which most browsers do not have yet. Where it is missing, the screenshot is inserted and you type the text.</li>
+      <li>The final polish uses fixed rules on this device. It is not an online AI service.</li>
+      <li>A paragraph that does not fit at the bottom of a page moves whole to the next page. A table or picture taller than one page runs past the page edge on screen.</li>
+      <li>Word export is a .doc file built from HTML, which Word opens directly. Some layout details (watermarks, page borders) are not carried over; use PDF for an exact copy.</li>
+      <li>Password lock prevents accidental editing. It is not encryption.</li>
+      <li>Find matches text within one formatted run; a match split across bold and plain text is not found.</li>
+    </ul>
+  </section>
+  <section id="g-help" class="card"><h2>Troubleshooting</h2>
+    <dl class="guide-dl">
+      <dt>"Folder access needed"</dt><dd>The browser asks again after a restart. Select the status at the top right and allow access.</dd>
+      <dt>"Sync problem"</dt><dd>Select the status to retry. If it repeats, open Settings, Error log, and download the log. The same log is written as wrapnote-errors.log in the sync folder.</dd>
+      <dt>A date shows an error</dt><dd>Type the day first: 28/10/2026. The month must be 1 to 12, and the day must exist (29/02 only in leap years).</dd>
+      <dt>Pictures make the document slow</dt><dd>Turn on Memory saver in Settings. New pictures are resized to 1,600 pixels wide.</dd>
+    </dl>
+  </section>
+</section>
+
+<!-- SETTINGS -->
+<section id="page-settings" class="page" hidden>
+  <h1>Settings</h1>
+  <div class="settings-grid">
+    <section class="card"><h2>Appearance</h2>
+      <div class="fld"><label for="setTheme">Theme</label><select id="setTheme"><option value="system">Follow the system</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
+      <label class="chk"><input type="checkbox" id="setMemory"> Memory saver (resize new pictures, keep fewer undo steps and revisions)</label>
+      <div class="fld"><label for="setAuthor">Default author name</label><input id="setAuthor" type="text" maxlength="80" autocomplete="name"></div>
+    </section>
+    <section class="card"><h2>Sync folder</h2>
+      <p id="syncFolder"></p>
+      <p id="syncStatusText" class="hint" aria-live="polite"></p>
+      <p id="syncSupport" class="hint warn" hidden>This browser cannot open folders. Use Chrome or Edge on a computer, or move documents with Export backup and Import backup.</p>
+      <div class="choice-row"><button type="button" class="btn primary" id="syncChoose">Choose sync folder</button><button type="button" class="btn" id="syncNow">Sync now</button><button type="button" class="btn ghost" id="syncOff">Stop syncing</button></div>
+    </section>
+    <section class="card"><h2>Backup</h2>
+      <p>Export every document as one file, or import a backup. Import shows a preview first.</p>
+      <div class="choice-row"><button type="button" class="btn" id="backupExport">Export backup (.json)</button><button type="button" class="btn" id="backupImport">Import backup…</button></div>
+      <p id="storageUse" class="hint"></p>
+    </section>
+    <section class="card"><h2>Error log</h2>
+      <p id="errCount"></p>
+      <pre id="errView" class="err-view"></pre>
+      <div class="choice-row"><button type="button" class="btn" id="errDownload">Download log</button><button type="button" class="btn ghost" id="errClear">Clear log</button></div>
+    </section>
+    <section class="card"><h2>About</h2>
+      <p id="appVersion"></p>
+      <h3>Revision history</h3>
+      <table class="data-table"><thead><tr><th scope="col">Version</th><th scope="col">Date</th><th scope="col">Change</th></tr></thead>
+        <tbody><tr><td>1.0.0</td><td class="num">16/11/2026</td><td>First release: guided intake, six-tab ribbon, paged layout, track changes, sync, dashboard, offline install.</td></tr></tbody></table>
+    </section>
+  </div>
+</section>
+</main>
+
+<nav class="bottombar" aria-label="Main">
+  <a href="#home" data-nav="home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="#docs" data-nav="docs"><span aria-hidden="true">▤</span>Docs</a>
+  <a href="#edit" data-nav="edit"><span aria-hidden="true">✎</span>Editor</a>
+  <a href="#dash" data-nav="dash"><span aria-hidden="true">▥</span>Dashboard</a>
+  <a href="#guide" data-nav="guide"><span aria-hidden="true">?</span>Guide</a>
+  <a href="#settings" data-nav="settings"><span aria-hidden="true">⚙</span>Settings</a>
+</nav>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<div id="print-root"></div>
+<script>{{JS}}</script>
+</body>
+</html>
