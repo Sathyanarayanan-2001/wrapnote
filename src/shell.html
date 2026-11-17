@@ -182,7 +182,7 @@
 <section id="page-guide" class="page guide" hidden>
   <h1>Guide</h1>
   <nav class="toc-guide" aria-label="Guide contents">
-    <a href="#g-start">Getting started</a><a href="#g-left">Left pane</a><a href="#g-ribbon">Ribbon</a><a href="#g-final">Finishing</a><a href="#g-keys">Shortcuts</a><a href="#g-sync">Sync</a><a href="#g-io">Import and export</a><a href="#g-example">Worked example</a><a href="#g-privacy">Privacy</a><a href="#g-limits">Limits</a><a href="#g-help">Troubleshooting</a>
+    <a href="#guide/g-start">Getting started</a><a href="#guide/g-left">Left pane</a><a href="#guide/g-ribbon">Ribbon</a><a href="#guide/g-final">Finishing</a><a href="#guide/g-keys">Shortcuts</a><a href="#guide/g-sync">Sync</a><a href="#guide/g-io">Import and export</a><a href="#guide/g-example">Worked example</a><a href="#guide/g-privacy">Privacy</a><a href="#guide/g-limits">Limits</a><a href="#guide/g-help">Troubleshooting</a>
   </nav>
   <section id="g-start" class="card"><h2>Getting started</h2>
     <ol>
@@ -190,7 +190,7 @@
       <li>Choose <strong>New minutes</strong> (or <strong>New study notes</strong>).</li>
       <li>Type in the fields on the left. The page on the right fills in as you type.</li>
       <li>Add text, tables, pictures or screenshots with <strong>Add content blocks</strong>.</li>
-      <li>Format with the ribbon, just as in Word.</li>
+      <li>Format with the ribbon, just as in Word. Choose <strong>Hide ribbon</strong> when you want more room.</li>
       <li>Choose <strong>Confirm end of document</strong> when the meeting or reading is over.</li>
       <li>Export to PDF, Word or HTML from the green banner.</li>
     </ol>
@@ -213,11 +213,14 @@
       <li><strong>Text &amp; labels</strong>: type in the box; the block appears on the page as you type. Toggle bold, centre, highlight or a callout box, and add labels.</li>
       <li><strong>Images</strong>: click, drop, or select the box and press Ctrl+V. With several pictures you choose 2×2 grid, 3-column grid, side by side, or stacked.</li>
       <li><strong>Screenshots</strong>: choose extract text, insert as image, or both. Several screenshots can go in a grid, side by side, or one by one.</li>
+      <li><strong>Grids fill up as you go.</strong> Choose <strong>Arrange</strong> on a picture block and pick 2×2 grid. Empty slots appear. The next picture or screenshot you add goes into the next empty slot, even if you take it later. You can also click an empty slot to add a picture straight into it. Pictures shrink to fit their cell, so nothing is cut off, and a full 2×2 grid always fits on one page. Text read from a screenshot in a grid follows the grid in its own block.</li>
+      <li><strong>Reading text from screenshots</strong>: the first time, WrapNote loads its text reader (about 7 MB) from this site. After that it works offline. Pictures never leave your device.</li>
       <li><strong>Smart table</strong>: set rows, columns, style and header options before it is inserted.</li>
     </ul>
     <p>The block list lets you move blocks up or down, edit, format or delete them. The page updates at once.</p>
   </section>
   <section id="g-ribbon" class="card"><h2>The ribbon</h2>
+    <p>The ribbon starts in <strong>simple</strong> form: each tab's commands sit on one row. Use the arrows at the ends of the row, or swipe it, to see more. <strong>Full ribbon</strong> (top right) shows every command on two rows with group names. <strong>Hide ribbon</strong> (or Ctrl+F1) leaves only the tab names; choose any tab to bring the commands back. WrapNote remembers your choice.</p>
     <dl class="guide-dl">
       <dt>Home</dt><dd>Cut, copy, paste, format painter; font, size (A⁺ / A⁻), bold, italic, underline, sub- and superscript, change case, highlight and font colour; lists (including multilevel), indent, alignment, line spacing, shading and borders; styles (Normal, Title, Subtitle, Heading 1–4, Quote, Label) and custom labels; find, replace, select and spell check. Choose "Import font…" in the font list to add a .ttf, .otf or .woff file.</dd>
       <dt>Insert</dt><dd>Cover pages, blank page, page break; tables and table tools (rows, columns, merge, split, shading, borders); pictures, shapes, charts with a data editor; links and comments; header, footer and page numbers ("Page X of Y", top, bottom or margin); text boxes, signature line, date and time, equations and symbols.</dd>
@@ -288,7 +291,7 @@
   </section>
   <section id="g-limits" class="card"><h2>Known limits</h2>
     <ul>
-      <li>Text extraction (OCR) uses the browser's built-in text detector, which most browsers do not have yet. Where it is missing, the screenshot is inserted and you type the text.</li>
+      <li>Text extraction (OCR) reads printed text well. Handwriting, very small text and photos taken at an angle read poorly. If the text reader cannot load (for example offline before its first use), the screenshot is kept and you type the text.</li>
       <li>The final polish uses fixed rules on this device. It is not an online AI service.</li>
       <li>A paragraph that does not fit at the bottom of a page moves whole to the next page. A table or picture taller than one page runs past the page edge on screen.</li>
       <li>Word export is a .doc file built from HTML, which Word opens directly. Some layout details (watermarks, page borders) are not carried over; use PDF for an exact copy.</li>
@@ -335,7 +338,8 @@
       <p id="appVersion"></p>
       <h3>Revision history</h3>
       <table class="data-table"><thead><tr><th scope="col">Version</th><th scope="col">Date</th><th scope="col">Change</th></tr></thead>
-        <tbody><tr><td>1.0.0</td><td class="num">16/11/2026</td><td>First release: guided intake, six-tab ribbon, paged layout, track changes, sync, dashboard, offline install.</td></tr></tbody></table>
+        <tbody><tr><td>1.1.0</td><td class="num">17/11/2026</td><td>Text extraction works in every modern browser; screenshots fill a 2×2 grid one after another without cropping; simple, full or hidden ribbon; guide contents links fixed.</td></tr>
+        <tr><td>1.0.0</td><td class="num">16/11/2026</td><td>First release: guided intake, six-tab ribbon, paged layout, track changes, sync, dashboard, offline install.</td></tr></tbody></table>
     </section>
   </div>
 </section>

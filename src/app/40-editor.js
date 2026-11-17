@@ -71,6 +71,8 @@ var Ed = (function () {
     var c = el().cloneNode(true);
     $$('[data-wn-push]', c).forEach(function (n) { n.style.marginTop = n.getAttribute('data-wn-orig') || ''; n.removeAttribute('data-wn-push'); n.removeAttribute('data-wn-orig'); if (!n.getAttribute('style')) n.removeAttribute('style'); });
     $$('.wn-hit', c).forEach(function (n) { n.replaceWith.apply(n, Array.prototype.slice.call(n.childNodes)); });
+    // Empty grid slots are screen-only helpers, rebuilt on every layout pass.
+    $$('.wn-slot', c).forEach(function (n) { n.remove(); });
     $$('.wn-selected, .wn-similar, .wn-flash', c).forEach(function (n) { n.classList.remove('wn-selected', 'wn-similar', 'wn-flash'); if (!n.className) n.removeAttribute('class'); });
     return c.innerHTML;
   }
@@ -243,6 +245,8 @@ var Ed = (function () {
       changed();
     });
     d.addEventListener('keydown', function (e) {
+      var slot = e.target.closest && e.target.closest('.wn-slot');
+      if (slot && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); Intake.addToBlock(slot.closest('[data-block]')); return; }
       var f = e.target.closest && e.target.closest('[data-field="title"]');
       var s = window.getSelection();
       var inTitle = s.anchorNode && (s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentNode).closest('[data-field="title"]');
@@ -255,6 +259,8 @@ var Ed = (function () {
       }
     });
     d.addEventListener('click', function (e) {
+      var slot = e.target.closest('.wn-slot');
+      if (slot) { e.preventDefault(); Intake.addToBlock(slot.closest('[data-block]')); return; }
       var a = e.target.closest('a');
       if (a && a.closest('.wn-toc')) { e.preventDefault(); var t = el().querySelector('[data-wn-id="' + CSS.escape(a.getAttribute('href').slice(1)) + '"]'); if (t) Views.flash(t); return; }
       if (a && (e.ctrlKey || e.metaKey) && S.isSafeUrl(a.getAttribute('href'))) { window.open(a.href, '_blank', 'noopener'); return; }

@@ -40,8 +40,10 @@ jobs:
           python -m http.server 8765 --directory dist > /dev/null 2>&1 &
           sleep 2
           python tests/e2e/run_e2e.py --round ci
+          python tests/e2e/run_issues.py --round ci
           python tests/e2e/links.py
           python tests/e2e/usability.py
+          python tests/e2e/usability_v110.py
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         with:

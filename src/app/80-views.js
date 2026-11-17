@@ -23,6 +23,7 @@ var Views = (function () {
     c.removeAttribute('id'); c.removeAttribute('contenteditable'); c.removeAttribute('style');
     $$('[contenteditable]', c).forEach(function (x) { x.removeAttribute('contenteditable'); });
     $$('[data-wn-push]', c).forEach(function (x) { x.style.marginTop = x.getAttribute('data-wn-orig') || ''; });
+    $$('.wn-slot', c).forEach(function (x) { x.remove(); });
     return c;
   }
 

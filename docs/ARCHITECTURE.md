@@ -1,6 +1,6 @@
 # Architecture
 
-Version 1.0.0 · 16/11/2026
+Version 1.1.0 · 17/11/2026
 
 ## Shape of the app
 
@@ -19,14 +19,30 @@ src/
     latex.js      LaTeX subset to MathML
     model.js      document model, generated MoM and study sections, validation
     dashboard.js  dashboard figures
+    pictures.js   grid slots, joining a grid, cell shape, OCR text clean-up
   app/       browser code, loaded in file-name order inside one closure
-    00-util  10-store  20-sync  30-pages  40-editor  45-intake  50-ribbon
+    00-util  10-store  20-sync  30-pages  40-editor  45-intake  47-ocr  50-ribbon
     55-insert  60-layout  70-review  80-views  90-io  99-main
   styles/    app.css (interface), doc.css (document, also used in exports)
   shell.html page skeleton with placeholders
 public/      sw.js, manifest.webmanifest, icons
 tests/       unit (Node), e2e (Playwright), golden examples
 ```
+
+## Optional text reader (OCR)
+
+OCR means optical character recognition: reading text from a picture. The build copies Tesseract (an open-source text reader compiled to WebAssembly) into `dist/ocr/`. Nothing loads until someone chooses "Extract text":
+
+1. `47-ocr.js` adds `ocr/tesseract.min.js` to the page.
+2. A worker loads from `ocr/worker.min.js`, then the matching engine build and the English language file.
+3. The worker stays loaded, so later screenshots skip the start-up cost.
+4. If it cannot load, the browser's built-in TextDetector is tried, and then the person types the text.
+
+The page's content security policy is unchanged: everything comes from the same site. The text reader's own picture cache is switched off, because the service worker already caches its files under the `wrapnote-` name, and other projects share this github.io origin.
+
+## Picture grids
+
+`pictures.js` holds the rules. A 2×2 grid holds 4 pictures, a 3-column grid fills rows of 3, side by side holds 2, and stacked never fills up. A new picture joins only the most recently added or arranged picture block, and only if that block is a grid with an empty slot. Empty slots are screen-only elements, rebuilt on every layout pass and removed from saves, print, exports and side views. Each cell takes the median shape of its pictures (clamped between 9:16 and 16:9), and `object-fit: contain` draws each picture whole. A cell is at most half of a page's writing height, so a full 2×2 grid fits on one page.
 
 ## Data model
 
@@ -84,6 +100,8 @@ Printing builds real page boxes of exact size, so the PDF matches the screen pag
 | Find and replace | O(t) characters of text | O(matches) |
 | Word diff (compare) | O((N+M)·D), D = number of edits, capped at 2,000; prefix and suffix trimmed first | O(D²) |
 | LaTeX to MathML | O(length) | O(length) |
+| Grid slots and cell shape | O(p log p) for p pictures in a block (median sort) | O(p) |
+| OCR text clean-up | O(lines) | O(lines) |
 
 The word diff is the one operation that can be worse than O(n log n). The trimming step and the edit cap keep it bounded; past the cap the middle part is shown as one replacement.
 
