@@ -42,6 +42,7 @@
     <div class="hero-actions">
       <button type="button" class="btn primary big" data-new="mom">New minutes</button>
       <button type="button" class="btn big" data-new="book">New study notes</button>
+      <button type="button" class="btn big" data-new="office">Office document</button>
       <button type="button" class="btn big ghost" data-new="blank">Blank document</button>
     </div>
   </div>
@@ -75,6 +76,7 @@
     <div class="head-actions">
       <button type="button" class="btn primary" data-new="mom">New minutes</button>
       <button type="button" class="btn" data-new="book">New study notes</button>
+      <button type="button" class="btn" data-new="office">Office document</button>
       <button type="button" class="btn ghost" data-new="blank">Blank</button>
     </div>
   </div>
@@ -120,7 +122,7 @@
       <button id="redoBtn" type="button" class="icon-btn" aria-label="Redo (Ctrl+Y)" title="Redo (Ctrl+Y)">↷</button>
       <button id="saveAsBtn" type="button" class="btn sm">Save to different location…</button>
       <select id="exportSel" class="btn sm" aria-label="Export">
-        <option value="">Export ▾</option><option value="pdf">PDF / print</option><option value="doc">Word (.doc)</option><option value="html">Web page (.html)</option>
+        <option value="">Export ▾</option><option value="pdf">PDF / print</option><option value="docx">Word (.docx)</option><option value="html">Web page (.html)</option>
         <option value="md">Markdown (.md)</option><option value="txt">Plain text (.txt)</option><option value="csv">Action items (.csv)</option><option value="json">WrapNote file (.json)</option><option value="saveas">Save to different location…</option>
       </select>
       <button id="confirmEndBtn" type="button" class="btn primary sm">Confirm end of document</button>
@@ -128,7 +130,7 @@
     <div id="finalBanner" class="banner ok" hidden>
       <strong>Final review.</strong> Editing is locked. Export the finished document, or reopen it.
       <button type="button" class="btn sm" data-export="pdf">PDF</button>
-      <button type="button" class="btn sm" data-export="doc">Word</button>
+      <button type="button" class="btn sm" data-export="docx">Word</button>
       <button type="button" class="btn sm" data-export="html">HTML</button>
       <button type="button" class="btn sm" id="reopenBtn">Reopen for editing</button>
     </div>
@@ -164,7 +166,7 @@
     </div>
     <footer class="statusbar">
       <span id="stPage" class="num">Page 1 of 1</span><span id="stWords" class="num"></span><span id="stChars" class="num"></span><span id="stParas" class="num"></span>
-      <span id="stTrack" class="st-track">Tracking off</span>
+      <span id="stStyle">Style: Normal</span><span id="stTrack" class="st-track">Tracking off</span>
     </footer>
   </div>
   <button id="focusExit" type="button" class="btn focus-exit">Exit focus (Esc)</button>
@@ -182,7 +184,7 @@
 <section id="page-guide" class="page guide" hidden>
   <h1>Guide</h1>
   <nav class="toc-guide" aria-label="Guide contents">
-    <a href="#guide/g-start">Getting started</a><a href="#guide/g-left">Left pane</a><a href="#guide/g-ribbon">Ribbon</a><a href="#guide/g-final">Finishing</a><a href="#guide/g-keys">Shortcuts</a><a href="#guide/g-sync">Sync</a><a href="#guide/g-io">Import and export</a><a href="#guide/g-example">Worked example</a><a href="#guide/g-privacy">Privacy</a><a href="#guide/g-limits">Limits</a><a href="#guide/g-help">Troubleshooting</a>
+    <a href="#guide/g-start">Getting started</a><a href="#guide/g-left">Left pane</a><a href="#guide/g-ribbon">Ribbon</a><a href="#guide/g-office">Office documents</a><a href="#guide/g-final">Finishing</a><a href="#guide/g-keys">Shortcuts</a><a href="#guide/g-sync">Sync</a><a href="#guide/g-io">Import and export</a><a href="#guide/g-example">Worked example</a><a href="#guide/g-privacy">Privacy</a><a href="#guide/g-limits">Limits</a><a href="#guide/g-help">Troubleshooting</a>
   </nav>
   <section id="g-start" class="card"><h2>Getting started</h2>
     <ol>
@@ -200,7 +202,7 @@
   <section id="g-left" class="card"><h2>Left pane: guided fields and blocks</h2>
     <h3>Modes</h3>
     <ul>
-      <li><strong>Minutes &amp; report</strong>: title, date, time from and to, location or link, host, scribe, purpose, people present and absent, agenda, decisions, action items (task, owner, due date, cost) and next meeting.</li>
+      <li><strong>Minutes &amp; report</strong>: title, date, time from and to, location or link, host, scribe, purpose, people present and absent, agenda, decisions, action items (task, owner, due date, done) and next meeting.</li>
       <li><strong>Book &amp; study notes</strong>: title, author, chapter or pages, date, core thesis, concepts (one "Term: definition" per line), quotes with page numbers, a mind map (indent with two spaces), active-recall questions and takeaways.</li>
       <li><strong>Blank</strong>: no fields; type straight onto the page.</li>
     </ul>
@@ -222,13 +224,24 @@
   <section id="g-ribbon" class="card"><h2>The ribbon</h2>
     <p>The ribbon starts in <strong>simple</strong> form: each tab's commands sit on one row. Use the arrows at the ends of the row, or swipe it, to see more. <strong>Full ribbon</strong> (top right) shows every command on two rows with group names. <strong>Hide ribbon</strong> (or Ctrl+F1) leaves only the tab names; choose any tab to bring the commands back. WrapNote remembers your choice.</p>
     <dl class="guide-dl">
-      <dt>Home</dt><dd>Cut, copy, paste, format painter; font, size (A⁺ / A⁻), bold, italic, underline, sub- and superscript, change case, highlight and font colour; lists (including multilevel), indent, alignment, line spacing, shading and borders; styles (Normal, Title, Subtitle, Heading 1–4, Quote, Label) and custom labels; find, replace, select and spell check. Choose "Import font…" in the font list to add a .ttf, .otf or .woff file.</dd>
+      <dt>Home</dt><dd>Cut, copy, paste, format painter; font, size (A⁺ / A⁻), bold, italic, underline, sub- and superscript, change case, highlight and font colour; lists (including multilevel), indent, alignment, line spacing, shading and borders; styles (Normal, Title, Subtitle, Heading 1–4, Quote, Label; the list and the status bar show the style where the cursor is) and custom labels; find, replace, select and spell check. Spell check underlines a word in red as soon as you finish it (British English, works offline); right-click it for suggestions, Ignore all or Add to dictionary. Choose "Import font…" in the font list to add a .ttf, .otf or .woff file.</dd>
       <dt>Insert</dt><dd>Cover pages, blank page, page break; tables and table tools (rows, columns, merge, split, shading, borders); pictures, shapes, charts with a data editor; links and comments; header, footer and page numbers ("Page X of Y", top, bottom or margin); text boxes, signature line, date and time, equations and symbols.</dd>
-      <dt>Design &amp; layout</dt><dd>Page borders, page colour, watermark (text or picture); margins, orientation, size (A4, Letter, Legal, A5), columns and breaks; paragraph indents and spacing; wrap text and position for pictures, shapes, charts and text boxes.</dd>
-      <dt>References</dt><dd>Table of contents from headings, labels, or captions, updating automatically or on demand; numbered captions (Figure 1, Table 1, Equation 1); footnotes shown at the bottom of their page.</dd>
+      <dt>Design &amp; layout</dt><dd>Template (Personal look or Office document); page borders, page colour (pick a swatch such as Pale green, or any colour), watermark (text or picture); margins, orientation, size (A4, Letter, Legal, A5), columns and breaks; paragraph indents and spacing; wrap text and position for pictures, shapes, charts and text boxes.</dd>
+      <dt>References</dt><dd>Table of contents from headings, labels, or captions, updating automatically or on demand; <strong>Update table</strong> refreshes every table of contents and table of figures and says how many; numbered captions (Figure 1, Table 1, Equation 1) attached to the item you choose: centred under a picture, chart or shape, above a table; <strong>Table of figures</strong> lists the captions of one kind; footnotes shown at the bottom of their page.</dd>
       <dt>Review</dt><dd>Spelling and grammar panel, word count; comments with previous and next; track changes with your name and the time on every change, accept or reject one or all; save revisions and compare two of them inline or side by side; read-only or password lock.</dd>
-      <dt>View</dt><dd>Print layout, read mode, outline, focus mode and immersive reader; navigation pane and rulers; zoom with 100%, one page, multiple pages and page width; new window, split view, arrange all, and side by side.</dd>
+      <dt>View</dt><dd>Print layout, read mode, outline, focus mode and immersive reader; navigation pane and rulers (the second pane of a split view gets its own ruler); zoom with 100%, one page, multiple pages and page width; new window, split view, arrange all, and side by side.</dd>
     </dl>
+  </section>
+  <section id="g-office" class="card"><h2>Office documents and Word templates</h2>
+    <p>An <strong>Office document</strong> is a brand-neutral controlled document: a classification line and a control table in the header with "Page X / Y", a cover page, revision history, a table of contents and ten numbered sections. The first page has its own footer (language, author, reviewer, source, approver and a notice); later pages show the footer notice.</p>
+    <ol>
+      <li>On Home, choose <strong>Office document</strong>.</li>
+      <li>Fill in <strong>Document control</strong> on the left. Keep a [BRACKET] placeholder until the approved wording is known.</li>
+      <li>Write in the sections. Headings are numbered for you (1, 1.1, 1.1.1); do not type the numbers.</li>
+      <li>Choose <strong>Export</strong>, <strong>Word (.docx)</strong>. Word opens it with the same styles, numbering, header, footers and fields. If Word asks to update fields, choose Yes so page numbers in the contents match Word's pages.</li>
+    </ol>
+    <p>To switch an existing document, use Design &amp; layout, <strong>Template</strong>. Switching to Office removes heading numbers you typed by hand, so they do not show twice.</p>
+    <p><strong>Your own Word template:</strong> Settings, Word template, <strong>Import Word template…</strong>. WrapNote checks it on this device, removes pictures (such as logos), comments, tracked changes, labels, custom data and the names in its properties, repairs settings that break the Word file format, adds any style WrapNote needs that the template lacks, and lists what it did. Exports of office documents then use the template's styles, numbering, header and footers. Nothing is uploaded.</p>
   </section>
   <section id="g-final" class="card"><h2>Finishing a document</h2>
     <ol>
@@ -262,8 +275,8 @@
   </section>
   <section id="g-io" class="card"><h2>Import and export</h2>
     <ul>
-      <li><strong>Export</strong> a document as PDF, Word (.doc), HTML, Markdown, plain text, action-item CSV, or a WrapNote file.</li>
-      <li><strong>Action items CSV</strong> uses UTF-8 with a byte order mark so Excel shows ₹ correctly. Amounts use lakh grouping (1,23,456.78).</li>
+      <li><strong>Export</strong> a document as PDF, Word (.docx), HTML, Markdown, plain text, action-item CSV, or a WrapNote file. The Word file is a real .docx: headings, lists, tables with borders and repeating header rows, pictures, charts, equations, footnotes, comments, tracked changes, captions, the table of contents, page colour, borders, watermark, header, footer and page numbers become their Word versions.</li>
+      <li><strong>Action items CSV</strong> uses UTF-8 with a byte order mark so Excel shows ₹ correctly. Columns: document, task, owner, due date (DD/MM/YYYY), status, ISO week and financial year.</li>
       <li><strong>Import action items</strong> from a CSV in the Action items field. WrapNote finds the header row even after title lines, matches columns such as "Assignee" or "Deadline", and shows every row as Ready or Skipped with the reason. Nothing is saved until you press Import.</li>
       <li><strong>Backup</strong> in Settings exports every document as one .json file. Importing shows what is new, newer, older or the same before anything changes.</li>
     </ul>
@@ -273,7 +286,7 @@
     <table class="data-table"><tbody>
       <tr><th scope="row">Date, time</th><td>28/10/2026, 23:30 to 00:45</td></tr>
       <tr><th scope="row">People</th><td>Present: A. Rao, K. Iyer, M. Das. Absent: P. Sen</td></tr>
-      <tr><th scope="row">Actions</th><td>"Update the plan", K. Iyer, due 04/11/2026, cost 12,500.50; "Book the venue", M. Das, due 02/11/2026, cost 7,499.50, done</td></tr>
+      <tr><th scope="row">Actions</th><td>"Update the plan", K. Iyer, due 04/11/2026; "Book the venue", M. Das, due 02/11/2026, done</td></tr>
     </tbody></table>
     <p><strong>Expected output</strong> on the page:</p>
     <ul>
@@ -281,8 +294,7 @@
       <li>Time line: <code>23:30–00:45 (1 h 15 min, ends next day)</code></li>
       <li>Attendance: <code>Present (3)</code> and <code>Absent (1)</code></li>
       <li>Action table sorted by due date: "Book the venue" first, then "Update the plan"</li>
-      <li>Total cost: 12,500.50 + 7,499.50 = <code>₹20,000.00</code></li>
-      <li>Dashboard: 1 open action, 1 done, cost ₹20,000.00 in FY 2026-27</li>
+      <li>Dashboard: 1 open action, 1 done, 0 overdue on or before 04/11/2026</li>
     </ul>
     <button type="button" class="btn primary" id="loadExample">Create this example now</button>
   </section>
@@ -294,7 +306,8 @@
       <li>Text extraction (OCR) reads printed text well. Handwriting, very small text and photos taken at an angle read poorly. If the text reader cannot load (for example offline before its first use), the screenshot is kept and you type the text.</li>
       <li>The final polish uses fixed rules on this device. It is not an online AI service.</li>
       <li>A paragraph that does not fit at the bottom of a page moves whole to the next page. A table or picture taller than one page runs past the page edge on screen.</li>
-      <li>Word export is a .doc file built from HTML, which Word opens directly. Some layout details (watermarks, page borders) are not carried over; use PDF for an exact copy.</li>
+      <li>Word lays out pages itself, so a page break can fall in a slightly different place than on screen. Fonts Word does not have are replaced: IBM Plex Sans becomes Arial. Text boxes and wrapped pictures become ordinary paragraphs and pictures in line with the text. Use PDF for an exact copy.</li>
+      <li>Spell check uses a British English dictionary. Words only in your field can be added with Add to dictionary or in Settings, Spelling.</li>
       <li>Password lock prevents accidental editing. It is not encryption.</li>
       <li>Find matches text within one formatted run; a match split across bold and plain text is not found.</li>
     </ul>
@@ -318,6 +331,12 @@
       <label class="chk"><input type="checkbox" id="setMemory"> Memory saver (resize new pictures, keep fewer undo steps and revisions)</label>
       <div class="fld"><label for="setAuthor">Default author name</label><input id="setAuthor" type="text" maxlength="80" autocomplete="name"></div>
     </section>
+    <section class="card"><h2>Spelling</h2>
+      <label class="chk"><input type="checkbox" id="setSpell"> Check spelling as I type (British English dictionary, works offline)</label>
+      <div class="fld"><label for="setSpellWords">Your dictionary: words that are always right, one per line</label><textarea id="setSpellWords" rows="5" spellcheck="false" maxlength="60000"></textarea></div>
+      <div class="choice-row"><button type="button" class="btn" id="setSpellSave">Save words</button></div>
+      <p id="setSpellInfo" class="hint" aria-live="polite"></p>
+    </section>
     <section class="card"><h2>Sync folder</h2>
       <p id="syncFolder"></p>
       <p id="syncStatusText" class="hint" aria-live="polite"></p>
@@ -329,6 +348,12 @@
       <div class="choice-row"><button type="button" class="btn" id="backupExport">Export backup (.json)</button><button type="button" class="btn" id="backupImport">Import backup…</button></div>
       <p id="storageUse" class="hint"></p>
     </section>
+    <section class="card"><h2>Word template</h2>
+      <p>Office documents use the built-in brand-neutral template. You can import your own Word template (.docx or .dotx) instead. It is checked and cleaned on this device: pictures, comments, tracked changes, labels, custom data and names in the document properties are removed before it is stored. Nothing is uploaded.</p>
+      <div class="choice-row"><button type="button" class="btn" id="tplImport">Import Word template…</button><button type="button" class="btn ghost" id="tplRemove">Remove imported template</button></div>
+      <label class="chk"><input type="checkbox" id="tplUse"> Use the imported template when exporting office documents to Word</label>
+      <div id="tplReport" class="tpl-report" aria-live="polite"></div>
+    </section>
     <section class="card"><h2>Error log</h2>
       <p id="errCount"></p>
       <pre id="errView" class="err-view"></pre>
@@ -338,7 +363,8 @@
       <p id="appVersion"></p>
       <h3>Revision history</h3>
       <table class="data-table"><thead><tr><th scope="col">Version</th><th scope="col">Date</th><th scope="col">Change</th></tr></thead>
-        <tbody><tr><td>1.1.0</td><td class="num">17/11/2026</td><td>Text extraction works in every modern browser; screenshots fill a 2×2 grid one after another without cropping; simple, full or hidden ribbon; guide contents links fixed.</td></tr>
+        <tbody><tr><td>1.2.0</td><td class="num">17/11/2026</td><td>Cursor stays where you type, also in tables; Update table works; captions sit centred on their picture, plus a table of figures; spell check as you type; page colour palette; ruler in split view; current style shown; no cost on action items; real Word (.docx) export; Office document template and Word template import with clean-up.</td></tr>
+        <tr><td>1.1.0</td><td class="num">17/11/2026</td><td>Text extraction works in every modern browser; screenshots fill a 2×2 grid one after another without cropping; simple, full or hidden ribbon; guide contents links fixed.</td></tr>
         <tr><td>1.0.0</td><td class="num">16/11/2026</td><td>First release: guided intake, six-tab ribbon, paged layout, track changes, sync, dashboard, offline install.</td></tr></tbody></table>
     </section>
   </div>

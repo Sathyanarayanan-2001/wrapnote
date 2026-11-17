@@ -211,6 +211,17 @@ var Insert = (function () {
     openDialog({ title: 'Page borders', body: h('div', null, field('Style', st), h('div', { class: 'grid3' }, field('Colour', col), field('Width (px)', w), field('Setting', kind))),
       actions: [{ label: 'Cancel' }, { label: 'Apply', primary: true, onClick: function (err) { var n = +w.value; if (!(n >= 1 && n <= 12)) { err('Width must be 1 to 12.'); return false; } Ed.doc.layout.border = { style: st.value, color: col.value, width: n, kind: kind.value }; Ed.changed(); } }] });
   }
+  /* Page colour palette. 1.1.0 had a button that applied its white starting swatch, so it looked broken. */
+  var PAGE_COLOURS = [['#FFFFFF', 'No colour (white)'], ['#FFF2CC', 'Pale yellow'], ['#E2F0D9', 'Pale green'], ['#DEEBF7', 'Pale blue'], ['#FBE5D6', 'Pale orange'], ['#EDE7F6', 'Pale purple'], ['#F2F2F2', 'Pale grey'], ['#FFFFF0', 'Ivory']];
+  function pageColour() {
+    var dlg, custom = h('input', { type: 'color', value: Ed.doc.layout.pageColor || '#ffffff', 'aria-label': 'Custom colour' });
+    function choose(c) { Ed.doc.layout.pageColor = c.toLowerCase(); Ed.changed(); Ed.relayout(); dlg.close(); toast(c.toUpperCase() === '#FFFFFF' ? 'Page colour removed.' : 'Page colour set. It shows on screen, in print and PDF, and in Word.'); }
+    var grid = h('div', { class: 'sym-grid colour-grid' }, PAGE_COLOURS.map(function (c) {
+      return h('button', { type: 'button', class: 'sym swatch-btn', 'aria-label': c[1], title: c[1] + ' ' + c[0], style: { background: c[0] }, onclick: function () { choose(c[0]); } });
+    }));
+    dlg = openDialog({ title: 'Page colour', body: h('div', null, grid, field('Or pick any colour', custom)), actions: [{ label: 'Cancel' }, { label: 'Use this colour', primary: true, onClick: function () { choose(custom.value); return false; } }] });
+  }
+
   function watermark() {
     var wm = Ed.doc.layout.watermark;
     var type = sel([['none', 'No watermark'], ['text', 'Text'], ['image', 'Picture']], wm.type), txt = h('input', { type: 'text', value: wm.text, maxlength: 40 });
@@ -272,7 +283,7 @@ var Insert = (function () {
   }
 
   return { table: table, pictures: pictures, shape: shape, chart: chart, chartSVG: chartSVG, link: link, headerFooter: headerFooter, textBox: textBox, signature: signature, dateTime: dateTime,
-    equation: equation, symbol: symbol, cover: cover, pageBorders: pageBorders, watermark: watermark, customMargins: customMargins, columns: columns, wrap: wrap, position: position, editFootnote: editFootnote };
+    equation: equation, symbol: symbol, cover: cover, pageBorders: pageBorders, pageColour: pageColour, watermark: watermark, customMargins: customMargins, columns: columns, wrap: wrap, position: position, editFootnote: editFootnote };
 })();
 
 /* ---------- References ---------- */
@@ -287,39 +298,108 @@ var Refs = (function () {
     } }] });
   }
 
-  /** Rebuild each table of contents. Automatic ones always; manual ones only when forced. Returns true if any changed. */
+  /** Rebuild each table of contents (and each table of figures). Automatic ones always; manual ones only when forced.
+   * Returns { count, changed }: 1.1.0 returned only "changed", so an up-to-date table was reported as missing. */
   function updateTocs(force) {
-    var changed = false;
+    var changed = false, count = 0;
     $$('.wn-toc', Ed.el()).forEach(function (nav) {
+      count++;
       if (nav.getAttribute('data-mode') === 'manual' && !force) return;
-      var source = nav.getAttribute('data-source') || 'headings', lv = +(nav.getAttribute('data-levels') || 3);
+      var source = nav.getAttribute('data-source') || 'headings', lv = +(nav.getAttribute('data-levels') || 3), only = nav.getAttribute('data-label') || '';
       var items = [];
-      if (source === 'headings') $$('h1,h2,h3', Ed.el()).forEach(function (hd) { var l = +hd.tagName[1]; if (l <= lv && !hd.closest('.wn-toc') && !hd.closest('.wn-cover') && hd.textContent.trim()) items.push({ l: l, t: hd.textContent.trim(), el: hd }); });
+      if (source === 'headings') $$('h1,h2,h3', Ed.el()).forEach(function (hd) { var l = +hd.tagName[1]; if (l <= lv && !hd.closest('.wn-toc, .wn-cover, .wn-off-cover') && hd.textContent.trim()) items.push({ l: l, t: hd.textContent.trim(), n: hd.getAttribute('data-num') || '', el: hd }); });
       if (source === 'labels') $$('[data-labels]', Ed.el()).forEach(function (b) { var lb = b.getAttribute('data-labels'); if (lb) items.push({ l: 1, t: lb + ': ' + (b.querySelector('.wn-block-body') || b).textContent.trim().slice(0, 60), el: b }); });
-      if (source === 'figures') $$('.wn-caption', Ed.el()).forEach(function (c) { items.push({ l: 1, t: c.textContent.trim(), el: c }); });
+      if (source === 'figures') $$('.wn-caption', Ed.el()).forEach(function (c) { if (!only || c.getAttribute('data-kind') === only) items.push({ l: 1, t: c.textContent.trim(), el: c }); });
+      var empty = source === 'figures' ? 'No ' + (only ? only.toLowerCase() + ' ' : '') + 'captions yet. Use References, Insert caption.' : 'No entries yet. Add headings (Home, Styles) or captions.';
       var html = items.map(function (it) {
-        return '<li class="lvl-' + it.l + '"><a href="#' + esc(it.el.getAttribute('data-wn-id') || '') + '">' + esc(it.t.slice(0, 120)) + '</a><span class="pg">' + (Layout.pageOf(it.el) + 1) + '</span></li>';
-      }).join('') || '<li class="lvl-1 empty">No entries yet. Add headings (Home, Styles) or captions.</li>';
+        return '<li class="lvl-' + it.l + '"><a href="#' + esc(it.el.getAttribute('data-wn-id') || '') + '">' + (it.n ? '<span class="tnum">' + esc(it.n) + '</span>' : '') + esc(it.t.slice(0, 120)) + '</a><span class="pg">' + (Layout.pageOf(it.el) + 1) + '</span></li>';
+      }).join('') || '<li class="lvl-1 empty">' + esc(empty) + '</li>';
       var ol = nav.querySelector('ol') || nav.appendChild(h('ol'));
       if (ol.innerHTML !== html) { ol.innerHTML = html; changed = true; }
     });
-    return changed;
+    return { count: count, changed: changed };
   }
 
+  /* ---------- Captions ----------
+   * A picture, chart or shape gets a <figcaption> inside its own figure, so the caption stays centred under it
+   * and moves with it (1.1.0 put a paragraph after the whole surrounding block). Tables get their caption above. */
+  var CAP_TARGETS = 'figure.wn-img, figure.wn-chart, figure.wn-shape, table, .wn-eq.block';
+  function captionTargets() {
+    var n = { Picture: 0, Chart: 0, Shape: 0, Table: 0, Equation: 0 };
+    return $$(CAP_TARGETS, Ed.el()).filter(function (t) { return !t.closest('.wn-gen, .wn-toc, .wn-chart-data, .wn-off-cover') && !(t.tagName === 'TABLE' && t.closest('figure')); }).map(function (t) {
+      var type = t.tagName === 'TABLE' ? 'Table' : t.classList.contains('wn-eq') ? 'Equation' : t.classList.contains('wn-chart') ? 'Chart' : t.classList.contains('wn-shape') ? 'Shape' : 'Picture';
+      n[type]++;
+      return { el: t, type: type, label: type + ' ' + n[type], kind: type === 'Table' ? 'Table' : type === 'Equation' ? 'Equation' : 'Figure' };
+    });
+  }
+  function existingCaption(t) {
+    if (t.tagName === 'FIGURE') return t.querySelector(':scope > figcaption.wn-caption');
+    var prev = t.previousElementSibling, next = t.nextElementSibling;
+    if (prev && prev.classList.contains('wn-caption')) return prev;
+    if (next && next.classList.contains('wn-caption')) return next;
+    return null;
+  }
+  /** With nothing selected: the uncaptioned item nearest before the cursor, then after it; with no cursor in the page,
+   * the last uncaptioned picture, chart or shape (usually the one just added), then any uncaptioned item. */
+  function defaultTarget(targets) {
+    var free = targets.map(function (t, i) { return { t: t, i: i }; }).filter(function (x) { return !existingCaption(x.t.el); });
+    if (!free.length) return -1;
+    var s = window.getSelection(), at = s.rangeCount && Ed.el().contains(s.anchorNode) ? s.anchorNode : null;
+    if (at) {
+      var before = free.filter(function (x) { return x.t.el.compareDocumentPosition(at) & Node.DOCUMENT_POSITION_FOLLOWING; });
+      if (before.length) return before[before.length - 1].i;
+      return free[0].i;
+    }
+    var figs = free.filter(function (x) { return x.t.kind === 'Figure'; });
+    return (figs.length ? figs[figs.length - 1] : free[0]).i;
+  }
   function caption() {
+    var targets = captionTargets();
+    var o = Ed.selectedObject(), cell = Tables.currentCell();
+    var sel = o ? (o.matches(CAP_TARGETS) ? o : o.querySelector(CAP_TARGETS) || o.closest(CAP_TARGETS)) : cell ? cell.closest('table') : null;
+    var pick = h('select', { id: 'capTarget' }, h('option', { value: '-1' }, 'At the cursor (no item)'));
+    targets.forEach(function (t, i) {
+      var hasCap = existingCaption(t.el);
+      var op = h('option', { value: String(i) }, t.label + (hasCap ? ' (has a caption)' : ''));
+      if (t.el === sel) op.selected = true;
+      pick.appendChild(op);
+    });
+    if (!sel) pick.value = String(defaultTarget(targets));
     var kind = h('select', null, ['Figure', 'Table', 'Equation'].map(function (k) { return h('option', { value: k }, k); }));
-    var where = h('select', null, h('option', { value: 'below' }, 'Below the selected object'), h('option', { value: 'above' }, 'Above the selected object'));
+    var where = h('select', null, h('option', { value: 'auto' }, 'Usual place (below pictures, above tables)'), h('option', { value: 'below' }, 'Below'), h('option', { value: 'above' }, 'Above'));
     var text = h('input', { type: 'text', maxlength: 200, placeholder: 'Describe the item' });
-    var o = Ed.selectedObject();
-    var tbl = Tables.currentCell() ? Tables.currentCell().closest('table') : null;
-    if (tbl && !o) kind.value = 'Table';
-    openDialog({ title: 'Insert caption', body: h('div', null, field('Label', kind), field('Position', where), field('Caption text', text), h('p', { class: 'hint' }, o || tbl ? 'The caption is attached to the selected item. Numbers update by themselves.' : 'No object is selected, so the caption goes at the cursor.')),
-      actions: [{ label: 'Cancel' }, { label: 'Insert', primary: true, onClick: function () {
-        var cap = h('p', { class: 'wn-caption', 'data-kind': kind.value }, h('span', { class: 'wn-capnum', contenteditable: 'false' }, kind.value + ' 1'), ': ' + (text.value.trim() || 'Caption'));
-        var target = o || tbl;
-        if (target) { Ed.snapshot(); var top = Ed.topBlock(target) || target; if (where.value === 'above') top.before(cap); else top.after(cap); Ed.changed(); }
-        else Ed.insertNode(cap);
+    function syncKind() { var t = targets[+pick.value]; if (t) kind.value = t.kind; }
+    pick.addEventListener('change', syncKind); syncKind();
+    openDialog({ title: 'Insert caption', body: h('div', null, field('Attach to', pick, 'The item you selected is chosen for you.'), field('Label', kind), field('Position', where), field('Caption text', text), h('p', { class: 'hint' }, 'Numbers follow the order on the page and update by themselves.')),
+      actions: [{ label: 'Cancel' }, { label: 'Insert', primary: true, onClick: function (err) {
+        var t = targets[+pick.value];
+        var label = text.value.trim().slice(0, 200) || 'Caption';
+        var num = h('span', { class: 'wn-capnum', contenteditable: 'false' }, kind.value + ' 1');
+        if (t && existingCaption(t.el)) { err('That item already has a caption. Edit its text on the page, or choose another item.'); return false; }
+        Ed.snapshot();
+        if (!t) { Ed.insertNode(h('p', { class: 'wn-caption', 'data-kind': kind.value }, num, ': ' + label)); return; }
+        var below = where.value === 'below' || (where.value === 'auto' && t.type !== 'Table');
+        if (t.el.tagName === 'FIGURE') {
+          var fc = h('figcaption', { class: 'wn-caption', 'data-kind': kind.value, contenteditable: 'true' }, num, ': ' + label);
+          if (below) t.el.appendChild(fc); else t.el.insertBefore(fc, t.el.firstChild);
+          t.el.classList.add('has-caption');
+        } else {
+          var cap = h('p', { class: 'wn-caption', 'data-kind': kind.value }, num, ': ' + label);
+          if (below) t.el.after(cap); else t.el.before(cap);
+        }
+        Ed.changed(); Views.flash(t.el);
       } }] });
+  }
+
+  /** Table of figures: a list of captions of one kind (Figure, Table, Equation) or all, like Word's. */
+  function tableOfFigures() {
+    var only = h('select', null, h('option', { value: 'Figure' }, 'Figures'), h('option', { value: 'Table' }, 'Tables'), h('option', { value: 'Equation' }, 'Equations'), h('option', { value: '' }, 'All captions'));
+    var mode = h('select', null, h('option', { value: 'auto' }, 'Automatic (updates as you type)'), h('option', { value: 'manual' }, 'Manual (update with "Update table")'));
+    openDialog({ title: 'Table of figures', body: h('div', null, field('List', only), field('Update mode', mode)), actions: [{ label: 'Cancel' }, { label: 'Insert', primary: true, onClick: function () {
+      var title = { Figure: 'List of figures', Table: 'List of tables', Equation: 'List of equations', '': 'List of captions' }[only.value];
+      var nav = h('nav', { class: 'wn-toc wn-tof', contenteditable: 'false', 'data-source': 'figures', 'data-label': only.value, 'data-mode': mode.value }, h('p', { class: 'wn-toc-title' }, title), h('ol'));
+      Ed.insertNode(nav); updateTocs(true); Ed.changed();
+    } }] });
   }
 
   function footnote() {
@@ -330,5 +410,5 @@ var Refs = (function () {
     } }] });
   }
 
-  return { insertToc: insertToc, updateTocs: updateTocs, caption: caption, footnote: footnote };
+  return { insertToc: insertToc, updateTocs: updateTocs, caption: caption, tableOfFigures: tableOfFigures, footnote: footnote, captionTargets: captionTargets };
 })();

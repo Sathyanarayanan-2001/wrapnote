@@ -1,30 +1,233 @@
 {
-  "note": "Five golden examples. All names, places and amounts are made up. Expected answers were worked out by hand.",
-  "examples": [
-    {
-      "name": "G1 weekly project sync with costs",
-      "input": { "mode": "mom", "title": "Project sync CW44", "fields": { "date": "2026-10-28", "from": "10:00", "to": "11:30", "location": "Room 4B", "host": "A. Rao", "scribe": "K. Iyer", "purpose": "Review progress.", "present": ["A. Rao", "K. Iyer", "M. Das"], "absent": ["P. Sen"], "agenda": "Status\nRisks", "decisions": "Extend pilot by 2 weeks", "actions": [ { "task": "Update plan", "owner": "K. Iyer", "due": "2026-11-04", "cost": 1250050, "done": false }, { "task": "Book venue", "owner": "M. Das", "due": "2026-11-02", "cost": 749950, "done": true } ], "nextDate": "2026-11-04", "nextTime": "10:00" } },
-      "expect": { "contains": ["28/10/2026 (Wed) · CW44 · FY 2026-27", "10:00–11:30 (1 h 30 min)", "Present (3):", "Absent (1):", "₹20,000.00", "04/11/2026 (Wed) · CW45 · FY 2026-27 at 10:00"], "order": ["Book venue", "Update plan"], "h2": 6 }
-    },
-    {
-      "name": "G2 late-night incident review crossing midnight",
-      "input": { "mode": "mom", "title": "Incident review", "fields": { "date": "2027-03-31", "from": "23:15", "to": "01:05", "purpose": "", "present": [], "absent": [], "agenda": "", "decisions": "", "actions": [], "nextDate": "2027-04-01", "nextTime": "" } },
-      "expect": { "contains": ["31/03/2027 (Wed) · CW13 · FY 2026-27", "23:15–01:05 (1 h 50 min, ends next day)", "01/04/2027 (Thu) · CW13 · FY 2027-28"], "order": [], "h2": 2 }
-    },
-    {
-      "name": "G3 study notes with nested map and recall",
-      "input": { "mode": "book", "title": "Systems thinking ch. 2", "fields": { "author": "Made-up Author", "chapter": "Ch. 2, pp. 30-58", "date": "2024-02-29", "thesis": "Feedback loops drive behaviour.", "concepts": "Stock: an accumulation\nFlow: a rate of change", "quotes": [ { "text": "Structure shapes behaviour.", "page": "41" } ], "diagram": "Loops\n  Reinforcing\n  Balancing", "recall": [ { "q": "What is a stock?", "a": "An accumulation." } ], "takeaways": "Look for delays" } },
-      "expect": { "contains": ["29/02/2024 (Thu) · CW09 · FY 2023-24", "<dt>Stock</dt><dd>an accumulation</dd>", "<footer>p. 41</footer>", "<li>Loops<ul class=\"wn-map\"><li>Reinforcing</li><li>Balancing</li></ul></li>", "<strong>Q1.</strong> What is a stock?"], "order": [], "h2": 6 }
-    },
-    {
-      "name": "G4 hostile input stays inert",
-      "input": { "mode": "mom", "title": "<script>alert(1)</script>", "fields": { "date": "2026-12-31", "from": "", "to": "", "location": "javascript:alert(2)", "host": "\"><img src=x onerror=alert(3)>", "purpose": "<b>bold?</b>", "present": [], "absent": [], "agenda": "", "decisions": "", "actions": [], "nextDate": "", "nextTime": "" } },
-      "expect": { "contains": ["&lt;script&gt;alert(1)&lt;/script&gt;", "31/12/2026 (Thu) · CW53 · FY 2026-27", "&lt;b&gt;bold?&lt;/b&gt;"], "notContains": ["<script", "<img", "href=\"javascript"], "order": [], "h2": 1 }
-    },
-    {
-      "name": "G5 lakh totals across many actions",
-      "input": { "mode": "mom", "title": "Budget review", "fields": { "date": "2027-01-04", "from": "09:00", "to": "17:30", "purpose": "", "present": [], "absent": [], "agenda": "", "decisions": "", "actions": [ { "task": "A", "owner": "", "due": "2027-01-10", "cost": 12345678, "done": false }, { "task": "B", "owner": "", "due": "2027-01-10", "cost": 87654322, "done": false }, { "task": "C", "owner": "", "due": "", "cost": 1, "done": false } ], "nextDate": "", "nextTime": "" } },
-      "expect": { "contains": ["04/01/2027 (Mon) · CW01 · FY 2026-27", "09:00–17:30 (8 h 30 min)", "₹10,00,000.01", "₹1,23,456.78", "₹8,76,543.22", "₹0.01"], "order": ["<td>A</td>", "<td>B</td>", "<td>C</td>"], "h2": 2 }
+ "note": "Five golden examples. All names, places and amounts are made up. Expected answers were worked out by hand. 1.2.0: costs removed from minutes; old stored cost values must never appear.",
+ "examples": [
+  {
+   "name": "G1 weekly project sync (old stored costs stay hidden)",
+   "input": {
+    "mode": "mom",
+    "title": "Project sync CW44",
+    "fields": {
+     "date": "2026-10-28",
+     "from": "10:00",
+     "to": "11:30",
+     "location": "Room 4B",
+     "host": "A. Rao",
+     "scribe": "K. Iyer",
+     "purpose": "Review progress.",
+     "present": [
+      "A. Rao",
+      "K. Iyer",
+      "M. Das"
+     ],
+     "absent": [
+      "P. Sen"
+     ],
+     "agenda": "Status\nRisks",
+     "decisions": "Extend pilot by 2 weeks",
+     "actions": [
+      {
+       "task": "Update plan",
+       "owner": "K. Iyer",
+       "due": "2026-11-04",
+       "cost": 1250050,
+       "done": false
+      },
+      {
+       "task": "Book venue",
+       "owner": "M. Das",
+       "due": "2026-11-02",
+       "cost": 749950,
+       "done": true
+      }
+     ],
+     "nextDate": "2026-11-04",
+     "nextTime": "10:00"
     }
-  ]
+   },
+   "expect": {
+    "contains": [
+     "28/10/2026 (Wed) · CW44 · FY 2026-27",
+     "10:00–11:30 (1 h 30 min)",
+     "Present (3):",
+     "Absent (1):",
+     "04/11/2026 (Wed) · CW45 · FY 2026-27 at 10:00"
+    ],
+    "order": [
+     "Book venue",
+     "Update plan"
+    ],
+    "h2": 6,
+    "notContains": [
+     "Cost",
+     "₹",
+     "Total"
+    ]
+   }
+  },
+  {
+   "name": "G2 late-night incident review crossing midnight",
+   "input": {
+    "mode": "mom",
+    "title": "Incident review",
+    "fields": {
+     "date": "2027-03-31",
+     "from": "23:15",
+     "to": "01:05",
+     "purpose": "",
+     "present": [],
+     "absent": [],
+     "agenda": "",
+     "decisions": "",
+     "actions": [],
+     "nextDate": "2027-04-01",
+     "nextTime": ""
+    }
+   },
+   "expect": {
+    "contains": [
+     "31/03/2027 (Wed) · CW13 · FY 2026-27",
+     "23:15–01:05 (1 h 50 min, ends next day)",
+     "01/04/2027 (Thu) · CW13 · FY 2027-28"
+    ],
+    "order": [],
+    "h2": 2
+   }
+  },
+  {
+   "name": "G3 study notes with nested map and recall",
+   "input": {
+    "mode": "book",
+    "title": "Systems thinking ch. 2",
+    "fields": {
+     "author": "Made-up Author",
+     "chapter": "Ch. 2, pp. 30-58",
+     "date": "2024-02-29",
+     "thesis": "Feedback loops drive behaviour.",
+     "concepts": "Stock: an accumulation\nFlow: a rate of change",
+     "quotes": [
+      {
+       "text": "Structure shapes behaviour.",
+       "page": "41"
+      }
+     ],
+     "diagram": "Loops\n  Reinforcing\n  Balancing",
+     "recall": [
+      {
+       "q": "What is a stock?",
+       "a": "An accumulation."
+      }
+     ],
+     "takeaways": "Look for delays"
+    }
+   },
+   "expect": {
+    "contains": [
+     "29/02/2024 (Thu) · CW09 · FY 2023-24",
+     "<dt>Stock</dt><dd>an accumulation</dd>",
+     "<footer>p. 41</footer>",
+     "<li>Loops<ul class=\"wn-map\"><li>Reinforcing</li><li>Balancing</li></ul></li>",
+     "<strong>Q1.</strong> What is a stock?"
+    ],
+    "order": [],
+    "h2": 6
+   }
+  },
+  {
+   "name": "G4 hostile input stays inert",
+   "input": {
+    "mode": "mom",
+    "title": "<script>alert(1)</script>",
+    "fields": {
+     "date": "2026-12-31",
+     "from": "",
+     "to": "",
+     "location": "javascript:alert(2)",
+     "host": "\"><img src=x onerror=alert(3)>",
+     "purpose": "<b>bold?</b>",
+     "present": [],
+     "absent": [],
+     "agenda": "",
+     "decisions": "",
+     "actions": [],
+     "nextDate": "",
+     "nextTime": ""
+    }
+   },
+   "expect": {
+    "contains": [
+     "&lt;script&gt;alert(1)&lt;/script&gt;",
+     "31/12/2026 (Thu) · CW53 · FY 2026-27",
+     "&lt;b&gt;bold?&lt;/b&gt;"
+    ],
+    "notContains": [
+     "<script",
+     "<img",
+     "href=\"javascript"
+    ],
+    "order": [],
+    "h2": 1
+   }
+  },
+  {
+   "name": "G5 many actions: same due date sorts by owner, undated last, no cost column",
+   "input": {
+    "mode": "mom",
+    "title": "Weekly actions",
+    "fields": {
+     "date": "2027-01-04",
+     "from": "09:00",
+     "to": "17:30",
+     "purpose": "",
+     "present": [],
+     "absent": [],
+     "agenda": "",
+     "decisions": "",
+     "actions": [
+      {
+       "task": "A",
+       "owner": "Ravi",
+       "due": "2027-01-10",
+       "cost": 12345678,
+       "done": false
+      },
+      {
+       "task": "B",
+       "owner": "Asha",
+       "due": "2027-01-10",
+       "cost": 87654322,
+       "done": false
+      },
+      {
+       "task": "C",
+       "owner": "",
+       "due": "",
+       "cost": 1,
+       "done": false
+      }
+     ],
+     "nextDate": "",
+     "nextTime": ""
+    }
+   },
+   "expect": {
+    "contains": [
+     "04/01/2027 (Mon) · CW01 · FY 2026-27",
+     "09:00–17:30 (8 h 30 min)",
+     "<th>Status</th></tr></thead>",
+     "10/01/2027"
+    ],
+    "notContains": [
+     "Cost",
+     "₹",
+     "tfoot"
+    ],
+    "order": [
+     "<td>B</td>",
+     "<td>A</td>",
+     "<td>C</td>"
+    ],
+    "h2": 2
+   }
+  }
+ ]
 }

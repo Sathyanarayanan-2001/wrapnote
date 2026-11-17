@@ -1,10 +1,10 @@
 # Architecture
 
-Version 1.1.0 · 17/11/2026
+Version 1.2.0 · 17/11/2026
 
 ## Shape of the app
 
-WrapNote is one HTML file. The build (`scripts/build.mjs`) inlines the fonts, the CSS and all JavaScript into `dist/index.html`. A content security policy (CSP) allows only that one inline script, by its SHA-256 hash. There is no framework and no content delivery network (CDN).
+WrapNote is one HTML file plus three optional same-site folders loaded on first use (the Word engine `word.js`, the text reader `ocr/` and the spell checker `spell/`). The build (`scripts/build.mjs`) inlines the fonts, the CSS and the app's JavaScript into `dist/index.html`. A content security policy (CSP) allows only that one inline script, by its SHA-256 hash. There is no framework and no content delivery network (CDN).
 
 ```
 src/
@@ -20,9 +20,14 @@ src/
     model.js      document model, generated MoM and study sections, validation
     dashboard.js  dashboard figures
     pictures.js   grid slots, joining a grid, cell shape, OCR text clean-up
+    officeTemplate.js  built-in office template, heading numbers, Word-template audit and clean-up
+    zip.js        ZIP writer and reader (CRC-32, stored or deflated parts)      } in word.js,
+    ooxml.js      Word (.docx) writer: styles, numbering, fields, Office Math   } loaded on first use
   app/       browser code, loaded in file-name order inside one closure
-    00-util  10-store  20-sync  30-pages  40-editor  45-intake  47-ocr  50-ribbon
-    55-insert  60-layout  70-review  80-views  90-io  99-main
+    00-util  10-store  20-sync  30-pages  40-editor  45-intake  47-ocr  48-spell
+    50-ribbon  55-insert  60-layout  70-review  80-views  90-io  91-word  99-main
+  word/      docx.js: page → Word model (in word.js, reaches the app through WN.app)
+  spell/     worker.js: nspell + en-GB dictionary, bundled by esbuild into dist/spell/
   styles/    app.css (interface), doc.css (document, also used in exports)
   shell.html page skeleton with placeholders
 public/      sw.js, manifest.webmanifest, icons
@@ -40,6 +45,25 @@ OCR means optical character recognition: reading text from a picture. The build 
 
 The page's content security policy is unchanged: everything comes from the same site. The text reader's own picture cache is switched off, because the service worker already caches its files under the `wrapnote-` name, and other projects share this github.io origin.
 
+## Word export (1.2.0)
+
+Version 1.1.0 saved HTML with a .doc name. Word's HTML importer ignores modern CSS, so borders, styles and lists were lost. Now:
+
+1. `docx.js` walks the live page, so it sees the same computed layout the person sees. Each block becomes a Word paragraph with a style (Title, Heading 1–4, Quote, Caption, List Paragraph, Table Text, TOC 1–3), a table, or a field. Run formatting is written only where the screen differs from the Word style (bold, italic, colour, size, font, shading). Screen-only marks (comment highlight, tracked-change colours, search hits) are not copied; Word draws its own.
+2. Pictures keep their PNG or JPEG bytes; other formats, charts and shapes are drawn to a canvas and saved as PNG. Equations go from MathML to Office Math. Contents, table of figures, captions (SEQ) and page numbers (PAGE, NUMPAGES) are Word fields with the current values cached, and `updateFields` asks Word to refresh them.
+3. `ooxml.js` writes the parts; `zip.js` packs them, compressing XML with the browser's CompressionStream and storing pictures as they are.
+4. Fonts Word may lack are mapped (IBM Plex Sans → Arial). The theme's major and minor fonts are the document's fonts, so Word's Design → Fonts still works.
+
+## Office template and template import (1.2.0)
+
+`officeTemplate.js` holds the built-in brand-neutral template as numbers measured from a reference layout (page 11906 × 16838 twips, margins 2477 / 1138 / 1181 / 1138, header 709, footer 850, Verdana 10 pt, heading sizes and spacing). It is written from scratch: no part of any supplied file is in the repository (a unit test scans for that). On screen, headings are numbered with `data-num` (CSS shows it), and the header and the two footers are drawn as page overlays; the first page reserves the height of its taller footer. In Word, headings are numbered by the heading styles.
+
+An imported template is audited (`audit`), cleaned (`sanitize`: pictures, custom XML, comments, tracked changes, rsids, IDs, protection and personal properties removed; schema-breaking cell settings repaired) and completed (`completeStyles`, `completeFonts`), then stored in IndexedDB. Office exports then use its styles, theme, numbering, headers and footers, with WrapNote's roles mapped by Word style name. `scripts/template-tool.mjs` runs the same checks from the command line; `npm run template:check` audits the built-in template in CI and fails if a role, font, field or table rule is missing.
+
+## Spell check (1.2.0)
+
+`48-spell.js` starts a worker (`spell/worker.js`: nspell with the en-GB Hunspell dictionary). Finished words are checked 120 ms after typing; the word at the cursor waits until it is finished. Marks are drawn with the CSS Custom Highlight API, so the document's HTML never changes and nothing extra is saved or exported. If the worker or the API is missing, the browser's own spellcheck is switched back on.
+
 ## Picture grids
 
 `pictures.js` holds the rules. A 2×2 grid holds 4 pictures, a 3-column grid fills rows of 3, side by side holds 2, and stacked never fills up. A new picture joins only the most recently added or arranged picture block, and only if that block is a grid with an empty slot. Empty slots are screen-only elements, rebuilt on every layout pass and removed from saves, print, exports and side views. Each cell takes the median shape of its pictures (clamped between 9:16 and 16:9), and `object-fit: contain` draws each picture whole. A cell is at most half of a page's writing height, so a full 2×2 grid fits on one page.
@@ -54,7 +78,8 @@ A document record:
 | `u` | Last update time in milliseconds; only moves forward |
 | `mode` | `mom`, `book` or `blank` |
 | `title`, `category`, `status` | Status is `draft` or `final` |
-| `fields.mom`, `fields.book` | Structured intake values; dates in ISO form, costs in paise |
+| `fields.mom`, `fields.book` | Structured intake values; dates in ISO form. Action items no longer have a cost (1.2.0); an old stored cost is kept but not shown |
+| `template`, `office` | `personal` or `office` (1.2.0); for office documents, the document-control fields shown in the header and footers |
 | `html` | The page content (sanitised on every load) |
 | `layout` | Page size, margins, border, watermark, header, footer, page numbers, branding |
 | `comments`, `revisions`, `protect`, `summary` | Review data |
@@ -70,7 +95,7 @@ The canvas HTML is the single source of truth. Structured fields render into one
 Pagination (`60-layout.js`):
 
 1. Clear the previous page pushes.
-2. Read each top-level block's position and height once (one layout).
+2. Read each top-level block's position and height once (one layout). The editing area is ordinary block layout (1.1.0 used a flex column, which made the browser's Up and Down keys and clicks land on the wrong line), so vertical margins collapse; the visible gap above each block is measured and a push becomes margin-top = gap + push.
 3. Work out page breaks with arithmetic. A block that would cross a page edge moves to the next page. A page break forces a new page. Footnote space is reserved on the page that holds the reference.
 4. Write the pushes and draw page boxes, headers, footers, page numbers, footnotes, borders and watermarks.
 
@@ -102,6 +127,9 @@ Printing builds real page boxes of exact size, so the PDF matches the screen pag
 | LaTeX to MathML | O(length) | O(length) |
 | Grid slots and cell shape | O(p log p) for p pictures in a block (median sort) | O(p) |
 | OCR text clean-up | O(lines) | O(lines) |
+| Spell check pass | O(w) words on the page plus one worker call for words not seen before; results cached per word | O(distinct words) |
+| Word export | O(n) page nodes + O(b) bytes of pictures (CRC-32, eight bytes per step) | O(b) |
+| Template audit and clean-up | O(x) characters of the template's XML | O(x) |
 
 The word diff is the one operation that can be worse than O(n log n). The trimming step and the edit cap keep it bounded; past the cap the middle part is shown as one replacement.
 

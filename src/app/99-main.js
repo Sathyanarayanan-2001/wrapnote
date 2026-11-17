@@ -70,6 +70,9 @@ function bindKeyboardSafety() {
   });
 }
 
+/* Modules the separately loaded Word engine (word.js) uses. */
+WN.app = { Layout: Layout, Ed: Ed, S: S, D: D, settings: settings, timings: timings, logError: logError, Store: Store, Review: Review, download: download };
+
 /* Read-only hooks used by the browser tests to compare on-screen figures with separately computed numbers. */
 WN.debug = {
   metas: function () { return JSON.parse(JSON.stringify(Store.metas())); },
@@ -77,7 +80,10 @@ WN.debug = {
   pages: function () { return Layout.pages(); },
   doc: function () { return Ed.doc ? JSON.parse(JSON.stringify(Ed.doc)) : null; },
   syncState: function () { return Sync.state(); },
-  timings: function () { return Object.assign({}, timings); }
+  timings: function () { return Object.assign({}, timings); },
+  spellReady: function () { return Spell.ready(); },
+  spellSuggest: function (w) { return Spell.suggest(w); },
+  spellMarked: function () { return Spell.currentBad().map(function (b) { return b.word; }); }
 };
 
 function boot() {
@@ -87,7 +93,7 @@ function boot() {
   window.addEventListener('unhandledrejection', function (e) { logError(e.reason, 'unhandledrejection'); });
   Store.open().then(function () {
     if (Store.isMemoryOnly()) toast('This browser blocks storage (private mode?). Work will be lost when the tab closes. Export often.', 'error', 10000);
-    Pages.bind(); Ed.bind(); Review.bind(); Views.bind(); IO.bind(); bindCanvasExtras(); bindKeyboardSafety();
+    Pages.bind(); Ed.bind(); Spell.bind(); Review.bind(); Views.bind(); IO.bind(); bindCanvasExtras(); bindKeyboardSafety();
     Ribbon.build();
     Store.onChange(function () { var p = Pages.current(); if (p === 'docs') Pages.renderDocs(); if (p === 'dash') Pages.renderDash(); });
     return Fonts.init().catch(function (e) { logError(e, 'fonts'); });

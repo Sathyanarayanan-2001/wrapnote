@@ -36,27 +36,28 @@ test('model: typed text is escaped, unsafe links are not linked', () => {
   assert.ok(ok.includes('<a href="https://meet.example.org/abc">'));
 });
 
-test('model: action table sorts by due, then owner, and totals cost exactly', () => {
+test('model: action table sorts by due, then owner, and shows no cost column (1.2.0)', () => {
   const html = model.actionsTable([
     { task: 'Task B', owner: 'Ravi', due: '2026-11-05', cost: 150050, done: false },
     { task: 'Task A', owner: 'Asha', due: '2026-11-05', cost: 99950, done: true },
     { task: 'Task C', owner: 'Zed', due: '', cost: 0, done: false }
   ]);
-  // Same due date: Asha before Ravi. No due date sorts last. 1,500.50 + 999.50 = 2,500.00
+  // Same due date: Asha before Ravi. No due date sorts last. Stored costs are kept in data but never shown.
   assert.ok(html.indexOf('Task A') < html.indexOf('Task B') && html.indexOf('Task B') < html.indexOf('Task C'));
-  assert.ok(html.includes('₹2,500.00'));
+  assert.ok(!/Cost|₹|tfoot/.test(html));
+  assert.equal((html.match(/<th>/g) || []).length, 5); // #, Task, Owner, Due, Status
 });
 
 test('model: mind map nests by indentation', () => {
   assert.equal(model.mindMap('A\n  B\nC'), '<ul class="wn-map"><li>A<ul class="wn-map"><li>B</li></ul></li><li>C</li></ul>');
 });
 
-test('model: validateAction accepts day-first dates, rupees and status words', () => {
+test('model: validateAction accepts day-first dates and status words, and ignores a cost column', () => {
   assert.deepEqual(model.validateAction({ task: ' Draft memo ', owner: 'Asha', due: '05/11/2026', cost: '1,500.50', status: 'Done' }).value,
-    { task: 'Draft memo', owner: 'Asha', due: '2026-11-05', cost: 150050, done: true });
+    { task: 'Draft memo', owner: 'Asha', due: '2026-11-05', done: true });
   assert.equal(model.validateAction({ task: '', due: '' }).ok, false);
   assert.match(model.validateAction({ task: 'x', due: '31/02/2026' }).error, /Feb 2026 has 28 days/);
-  assert.match(model.validateAction({ task: 'x', cost: '12.345' }).error, /^Cost:/);
+  assert.equal(model.validateAction({ task: 'x', cost: '12.345' }).ok, true); // a stray cost column no longer blocks an import
   assert.match(model.validateAction({ task: 'x', status: 'maybe' }).error, /not recognised/);
 });
 
@@ -89,10 +90,9 @@ test('dashboard: every figure matches an independent hand count', () => {
   assert.equal(d.words, 500);
   // Actions: 4 total, 1 done, 3 open; t1 overdue (10/11 < 16/11); t2 due within 7 days; t4 has no date.
   assert.deepEqual(d.actions, { total: 4, open: 3, done: 1, overdue: 1, dueNext7: 1 });
-  // Cost 100.50 + 20.00 + 999.99 = 1,120.49; FY: t1 -> FY 2026-27, t3 (02/04/2027) -> FY 2027-28, t4 uses doc date 03/08/2026 -> FY 2026-27.
-  assert.equal(d.costTotal, 112049);
-  assert.equal(money.formatPaise(d.costTotal), '₹1,120.49');
-  assert.deepEqual(d.costByFY.map((x) => [x.label, x.value]), [['FY 2026-27', 110049], ['FY 2027-28', 2000]]);
+  // 1.2.0: no cost figures at all, even though the input still carries old cost values.
+  assert.equal(d.costTotal, undefined);
+  assert.equal(d.costByFY, undefined);
   // Weeks: CW40..CW47; Alpha in CW47, Beta in CW46, Gamma (CW32) outside the window.
   assert.equal(d.weeks.length, 8);
   assert.equal(d.weeks[7].label, 'CW47');

@@ -43,8 +43,9 @@ var Pages = (function () {
   }
 
   function createAndOpen(mode) {
-    var d = MODEL.newDoc(mode, Date.now(), D.localISO());
-    return Store.putDoc(d, '').then(function () { go('#edit/' + d.id); });
+    var d = MODEL.newDoc(mode === 'office' ? 'blank' : mode, Date.now(), D.localISO());
+    if (mode === 'office') WN.officeTemplate.setupDoc(d);
+    return Store.putDoc(d, mode === 'office' ? Store.plainOf(d.html) : '').then(function () { go('#edit/' + d.id); });
   }
 
   /* ---------- Home ---------- */
@@ -129,8 +130,7 @@ var Pages = (function () {
     [['Documents', M.formatCount(data.total), 'saved on this device'],
      ['Words written', M.formatCount(data.words), 'across all documents'],
      ['Open actions', M.formatCount(data.actions.open), M.formatCount(data.actions.dueNext7) + ' due in 7 days'],
-     ['Overdue actions', M.formatCount(data.actions.overdue), data.actions.overdue ? 'past their due date' : 'nothing overdue', data.actions.overdue ? 'warn' : ''],
-     ['Action costs', M.formatPaise(data.costTotal), 'sum of costs on action items']
+     ['Overdue actions', M.formatCount(data.actions.overdue), data.actions.overdue ? 'past their due date' : 'nothing overdue', data.actions.overdue ? 'warn' : '']
     ].forEach(function (x) { k.appendChild(h('div', { class: 'kpi ' + (x[3] || '') }, h('span', { class: 'kpi-label' }, x[0]), h('span', { class: 'kpi-value num' }, x[1]), h('span', { class: 'kpi-sub' }, x[2]))); });
     var grid = $('#dashCharts'); grid.textContent = '';
     $('#dashEmpty').hidden = data.total > 0;
@@ -140,7 +140,6 @@ var Pages = (function () {
     grid.appendChild(Charts.card('Documents by category', data.byCategory.map(function (x) { return { label: x.label, value: x.count, color: colorFor(x.key) }; }), 'bar', 'Documents'));
     grid.appendChild(Charts.card('Draft and final', data.byStatus.map(function (x) { return { label: x.label, value: x.count, color: x.key === 'Final' ? '#059669' : '#d97706' }; }), 'bar', 'Documents'));
     grid.appendChild(Charts.card('Action items', [{ label: 'Done', value: data.actions.done, color: '#059669' }, { label: 'Open, on time', value: data.actions.open - data.actions.overdue, color: '#2563eb' }, { label: 'Overdue', value: data.actions.overdue, color: '#dc2626' }], 'bar', 'Actions'));
-    if (data.costByFY.length) grid.appendChild(Charts.card('Action costs by financial year', data.costByFY.map(function (x) { return { label: x.label, value: x.value, color: colorFor(x.label), money: true }; }), 'bar', 'Cost (₹)'));
     var rec = h('div', { class: 'card' }, h('h3', null, 'Recently edited'));
     data.recent.forEach(function (m) { rec.appendChild(docCard(m)); });
     grid.appendChild(rec);
@@ -154,10 +153,31 @@ var Pages = (function () {
   }
 
   /* ---------- Settings ---------- */
+  /** Audit summary of the imported template: counts and roles only, never the removed text itself. */
+  function showTemplate(rec) {
+    var box = $('#tplReport'); box.textContent = '';
+    if (!rec) { box.appendChild(h('p', { class: 'hint' }, 'No template imported. Office documents use the built-in template.')); return; }
+    var a = rec.audit, b = a.before, af = a.after;
+    var li = function (t) { return h('li', null, t); };
+    box.appendChild(h('p', null, h('strong', null, rec.name), ' imported on ' + D.formatStamp(rec.at) + '.'));
+    box.appendChild(h('ul', null,
+      li(b.styles + ' styles (' + b.paragraphStyles + ' paragraph, ' + b.tableStyles + ' table); headings ' + (b.headingsNumbered ? 'are numbered by the template' : 'are not numbered') + '.'),
+      li('Fonts: ' + (b.fonts.join(', ') || 'none named') + (b.fontsNotInWord.length ? '. Not standard in Word: ' + b.fontsNotInWord.join(', ') + ' (declared so Word substitutes a similar font)' : '') + '.'),
+      li('Headers ' + b.headers + ', footers ' + b.footers + '; different first page: ' + (b.titlePg ? 'yes' : 'no') + '; PAGE field: ' + (b.pageFields ? 'yes' : 'no') + '; NUMPAGES: ' + (b.numPagesField ? 'yes' : 'no') + '.'),
+      li(a.addedStyles.length ? 'Added missing styles: ' + a.addedStyles.join(', ') + '.' : 'No styles were missing.'),
+      li(b.privacy.length ? 'Removed or flagged: ' + b.privacy.join('; ') + '.' : 'No personal or organisation data found.'),
+      li(af.privacy.length ? 'Still to review by hand: ' + af.privacy.join('; ') + '.' : 'Nothing left to review.')));
+  }
+
   function renderSettings() {
     $('#setTheme').value = settings.get('theme', 'system');
     $('#setMemory').checked = settings.get('memorySaver', true);
     $('#setAuthor').value = settings.get('author', '');
+    $('#setSpell').checked = Spell.enabled();
+    $('#tplUse').checked = settings.get('useImportedTemplate', false);
+    Docx.storedTemplate().then(showTemplate).catch(function (e) { logError(e, 'template'); });
+    $('#setSpellWords').value = Spell.personal().join('\n');
+    $('#setSpellInfo').textContent = Spell.personal().length + ' word(s) in your dictionary, stored in this browser only.';
     $('#syncSupport').hidden = Sync.supported();
     $('#syncFolder').textContent = Sync.folderName() ? 'Folder: ' + Sync.folderName() : 'No folder chosen. Documents stay in this browser only.';
     $('#errCount').textContent = errorLog.length ? errorLog.length + ' entries' : 'No errors recorded.';
@@ -179,6 +199,26 @@ var Pages = (function () {
     $('#setTheme').addEventListener('change', function () { settings.set('theme', this.value); applyTheme(); });
     $('#setMemory').addEventListener('change', function () { settings.set('memorySaver', this.checked); toast(this.checked ? 'Memory saver on: pictures are resized and fewer undo steps are kept.' : 'Memory saver off.'); });
     $('#setAuthor').addEventListener('change', function () { settings.set('author', this.value.trim().slice(0, 80)); });
+    $('#tplImport').addEventListener('click', function () {
+      var inp = h('input', { type: 'file', accept: '.docx,.dotx,application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      inp.addEventListener('change', function () {
+        var f = inp.files && inp.files[0]; if (!f) return;
+        $('#tplReport').textContent = 'Checking ' + f.name + '…';
+        Docx.importTemplate(f).then(function (rec) { settings.set('useImportedTemplate', true); $('#tplUse').checked = true; showTemplate(rec); toast('Template imported and cleaned.'); })
+          .catch(function (e) { $('#tplReport').textContent = ''; toast(e.message, 'error', 8000); });
+      });
+      inp.click();
+    });
+    $('#tplRemove').addEventListener('click', function () { Docx.removeTemplate().then(function () { settings.set('useImportedTemplate', false); $('#tplUse').checked = false; showTemplate(null); toast('Imported template removed. Office documents use the built-in template.'); }); });
+    $('#tplUse').addEventListener('change', function () { settings.set('useImportedTemplate', this.checked); });
+    $('#setSpell').addEventListener('change', function () { if (this.checked !== Spell.enabled()) Spell.toggle(); toast('Spell check ' + (this.checked ? 'on' : 'off') + '.'); });
+    $('#setSpellSave').addEventListener('click', function () {
+      var raw = $('#setSpellWords').value.split(/\r?\n/);
+      var bad = raw.filter(function (w) { return w.trim() && (/\s/.test(w.trim()) || w.trim().length > 60); });
+      var n = Spell.setWords(raw);
+      $('#setSpellWords').value = Spell.personal().join('\n');
+      $('#setSpellInfo').textContent = n + ' word(s) saved.' + (bad.length ? ' Skipped ' + bad.length + ' line(s) with spaces or over 60 letters.' : '');
+    });
     $('#syncChoose').addEventListener('click', function () { Sync.choose().then(renderSettings); });
     $('#syncNow').addEventListener('click', function () { Sync.runNow().then(renderSettings); });
     $('#syncOff').addEventListener('click', function () { Sync.disconnect().then(renderSettings); });
@@ -201,7 +241,7 @@ var Pages = (function () {
     d.category = 'Examples';
     Object.assign(d.fields.mom, { date: '2026-10-28', from: '23:30', to: '00:45', location: 'https://meet.example.org/sync', host: 'A. Rao', scribe: 'K. Iyer',
       purpose: 'Agree the pilot plan and budget.', present: ['A. Rao', 'K. Iyer', 'M. Das'], absent: ['P. Sen'], agenda: 'Pilot status\nBudget', decisions: 'Extend the pilot by two weeks.',
-      actions: [{ id: 'a1', task: 'Update the plan', owner: 'K. Iyer', due: '2026-11-04', cost: 1250050, done: false }, { id: 'a2', task: 'Book the venue', owner: 'M. Das', due: '2026-11-02', cost: 749950, done: true }],
+      actions: [{ id: 'a1', task: 'Update the plan', owner: 'K. Iyer', due: '2026-11-04', done: false }, { id: 'a2', task: 'Book the venue', owner: 'M. Das', due: '2026-11-02', done: true }],
       nextDate: '2026-11-04', nextTime: '10:00' });
     d.html = '<div class="wn-gen" data-gen="mom" contenteditable="false">' + MODEL.renderGenerated(d) + '</div>';
     return Store.putDoc(d).then(function () { toast('Worked example created.'); go('#edit/' + d.id); });

@@ -5,7 +5,6 @@
   'use strict';
   var isNode = typeof module === 'object' && module.exports;
   var dates = isNode ? require('./dates.js') : g.WN.dates;
-  var money = isNode ? require('./money.js') : g.WN.money;
 
   var MODE_LABEL = { mom: 'Minutes and reports', book: 'Study notes', blank: 'Blank' };
 
@@ -19,7 +18,7 @@
 
   function aggregate(metas, today) {
     var byMode = new Map(), byCat = new Map(), byStatus = new Map(), fyCost = new Map();
-    var words = 0, acts = { total: 0, open: 0, done: 0, overdue: 0, dueNext7: 0 }, costs = [];
+    var words = 0, acts = { total: 0, open: 0, done: 0, overdue: 0, dueNext7: 0 };
     var weekKeys = [], weekCount = new Map();
     // Last 8 ISO weeks ending with the current one, oldest first.
     var monday = dates.weekStart(today);
@@ -42,12 +41,6 @@
           if (a.due && a.due < today) acts.overdue++;
           else if (a.due && a.due <= in7) acts.dueNext7++;
         }
-        if (a.cost) {
-          costs.push(a.cost);
-          var fy = dates.financialYear(a.due && dates.isValidISO(a.due) ? a.due : m.date);
-          var label = fy ? fy.label : 'No date';
-          fyCost.set(label, money.sumPaise([fyCost.get(label) || 0, a.cost]));
-        }
       });
     });
     var recent = metas.slice().sort(function (a, b) { return (b.u || 0) - (a.u || 0) || String(b.date).localeCompare(String(a.date)) || String(a.title).localeCompare(String(b.title)); }).slice(0, 5);
@@ -58,8 +51,6 @@
       byStatus: sortedEntries(byStatus),
       words: words,
       actions: acts,
-      costTotal: money.sumPaise(costs),
-      costByFY: Array.from(fyCost.entries()).map(function (e) { return { key: e[0], label: e[0], value: e[1] }; }).sort(function (a, b) { return a.label.localeCompare(b.label); }),
       weeks: weekKeys.map(function (wk) { return { key: wk.key, label: wk.label, count: weekCount.get(wk.key) }; }),
       recent: recent
     };

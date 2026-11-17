@@ -21,6 +21,10 @@ var Ed = (function () {
       ['mom', 'book'].forEach(function (k) { doc.fields[k] = Object.assign(f[k], doc.fields[k] || {}); });
       doc.layout = Object.assign(L, doc.layout || {});
       doc.comments = doc.comments || []; doc.revisions = doc.revisions || []; doc.protect = doc.protect || { mode: 'none' };
+      // 1.2.0: documents made before templates existed use the personal look.
+      doc.template = doc.template === 'office' ? 'office' : 'personal';
+      if (doc.template === 'office') doc.office = WN.officeTemplate.clean(doc.office);
+      el().classList.toggle('tpl-office', doc.template === 'office');
       el().innerHTML = sanitizeHtml(doc.html || '');
       ensureGen();
       hist = []; histIdx = -1; histMax = settings.get('memorySaver', true) ? 25 : 60;
@@ -29,6 +33,7 @@ var Ed = (function () {
       $('#edCat').value = doc.category || '';
       Intake.render();
       Review.onOpen();
+      Spell.onOpen();
       Layout.applyPageSetup();
       applyLock();
       snapshot();
@@ -251,6 +256,7 @@ var Ed = (function () {
       var s = window.getSelection();
       var inTitle = s.anchorNode && (s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentNode).closest('[data-field="title"]');
       if ((f || inTitle) && e.key === 'Enter') e.preventDefault();
+      if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && tableArrow(e, s)) return;
       if (e.key === 'Tab' && !e.ctrlKey && !e.altKey) {
         var li = s.anchorNode && (s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentNode).closest('li');
         var cell = s.anchorNode && (s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentNode).closest('td,th');
@@ -311,15 +317,68 @@ var Ed = (function () {
   }
 
   /** Keep the top level made of blocks: stray text from typing becomes a paragraph (pagination needs blocks). */
+  /* Up and Down in a table move by row, like Word. Browsers move Down from the last line of a cell into the
+   * next cell on the same row, which is the "cursor jumps to a strange place" users reported.
+   * Returns true when it moved the caret itself. */
+  function rectOf(range, fallback) {
+    var rs = range.getClientRects();
+    if (rs.length) return rs[rs.length - 1];
+    var b = range.getBoundingClientRect();
+    return (b.width || b.height) ? b : fallback.getBoundingClientRect();
+  }
+  function placeCaret(node, atEnd) {
+    var r = document.createRange(); r.selectNodeContents(node); r.collapse(!atEnd);
+    var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  }
+  function tableArrow(e, s) {
+    if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || !s.rangeCount || !s.isCollapsed) return false;
+    var n = s.anchorNode, cell = n && (n.nodeType === 1 ? n : n.parentNode).closest('td,th');
+    if (!cell || !el().contains(cell) || cell.closest('.wn-gen,[contenteditable="false"]')) return false;
+    var down = e.key === 'ArrowDown';
+    var caret = rectOf(s.getRangeAt(0), cell);
+    var edge = document.createRange(); edge.selectNodeContents(cell); edge.collapse(!down);
+    var er = rectOf(edge, cell);
+    // Still another line inside this cell: let the browser move within the cell.
+    if (Math.abs(caret.top - er.top) > Math.max(4, caret.height / 2)) return false;
+    var table = cell.closest('table'), row = cell.parentNode, rows = Array.prototype.slice.call(table.rows);
+    var next = rows[rows.indexOf(row) + (down ? 1 : -1)];
+    e.preventDefault();
+    if (next) {
+      var x = caret.left, target = null;
+      Array.prototype.forEach.call(next.cells, function (c) { var b = c.getBoundingClientRect(); if (x >= b.left - 1 && x <= b.right + 1) target = c; });
+      target = target || next.cells[Math.min(cell.cellIndex, next.cells.length - 1)];
+      var line = document.createRange(); line.selectNodeContents(target); line.collapse(down);
+      var lr = rectOf(line, target), hit = document.caretRangeFromPoint && document.caretRangeFromPoint(x, lr.top + lr.height / 2);
+      if (hit && target.contains(hit.startContainer)) { s.removeAllRanges(); s.addRange(hit); } else placeCaret(target, !down);
+      return true;
+    }
+    // Leaving the table: go to the paragraph after (or before) it, adding an empty one if there is none.
+    var top = topBlock(table) || table, sib = down ? top.nextElementSibling : top.previousElementSibling;
+    if (sib && sib.tagName === 'TABLE' && sib.rows.length) {
+      var rr = sib.rows[down ? 0 : sib.rows.length - 1];
+      placeCaret(rr.cells[Math.min(cell.cellIndex, rr.cells.length - 1)], !down);
+      return true;
+    }
+    if (!sib || sib.isContentEditable === false || sib.matches('.wn-gen,figure,nav')) {
+      var p = document.createElement('p'); p.appendChild(document.createElement('br'));
+      if (down) top.after(p); else top.before(p);
+      sib = p; changed();
+    }
+    placeCaret(sib, !down);
+    return true;
+  }
+
   function normalize() {
     var d = el(), moved = false;
+    // Wrapping a node moves it, and moving it collapses the selection; remember the caret and put it back.
+    var s0 = window.getSelection(), an = s0.anchorNode, ao = s0.anchorOffset;
     Array.prototype.slice.call(d.childNodes).forEach(function (n) {
       if (n.nodeType === 3 && n.textContent.trim()) { var p = h('p'); d.insertBefore(p, n); p.appendChild(n); moved = true; }
       else if (n.nodeType === 1 && /^(SPAN|B|STRONG|I|EM|U|A|FONT|MARK|SUB|SUP|BR)$/.test(n.tagName) && !(n.tagName === 'BR' && d.childNodes.length === 1)) {
         var p2 = h('p'); d.insertBefore(p2, n); p2.appendChild(n); moved = true;
       }
     });
-    if (moved) { var last = d.querySelector(':scope > p:last-of-type'); if (last) { var r = document.createRange(); r.selectNodeContents(last); r.collapse(false); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); } }
+    if (moved && an && d.contains(an)) { var r = document.createRange(); r.setStart(an, Math.min(ao, an.nodeType === 3 ? an.length : an.childNodes.length)); r.collapse(true); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); }
     if (!d.childNodes.length) d.appendChild(h('p', null, h('br')));
   }
 

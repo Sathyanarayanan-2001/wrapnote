@@ -103,12 +103,46 @@ var Review = (function () {
     issues.slice(0, 200).forEach(function (it) {
       list.appendChild(h('li', null, h('button', { type: 'button', class: 'linkish', onclick: function () { selectText(it.start, it.end); } }, h('strong', null, it.type + ': '), it.message, h('span', { class: 'excerpt' }, ' “' + text.slice(Math.max(0, it.start - 15), it.end + 15).replace(/\s+/g, ' ') + '”'))));
     });
+    var spellBox = h('div', { class: 'sp-spell' });
     var body = h('div', { class: 'sp-body' },
+      h('h3', null, 'Spelling'), spellBox,
+      h('h3', null, 'Grammar and spacing'),
       h('p', null, issues.length ? issues.length + ' possible issue' + (issues.length === 1 ? '' : 's') + ' found. Select one to jump to it.' : 'No grammar or spacing issues found.'),
       list,
-      h('p', { class: 'hint' }, 'Spelling mistakes are underlined by your browser\'s own dictionary (Home, Editing, Spell check). Grammar checks here are simple rules: repeated words, spacing, a/an, and capitals.'));
+      h('p', { class: 'hint' }, 'Spelling uses a British English (en-GB) dictionary on this device; right-click an underlined word for suggestions. Grammar checks are simple rules: repeated words, spacing, a/an, and capitals.'));
+    fillSpelling(spellBox);
     openPanel('spelling', 'Spelling and grammar', body);
   }
+  /** Unique misspelt words with how often they occur, a jump link and the first suggestions. */
+  function fillSpelling(box) {
+    box.textContent = '';
+    if (!Spell.enabled()) { box.appendChild(h('p', null, 'Spell check is off. Turn it on with Home, Editing, Spell check.')); return; }
+    if (!Spell.ready()) { box.appendChild(h('p', null, Spell.state() === 'browser' ? 'The built-in dictionary could not load, so your browser\'s own spelling underlines are used.' : 'The dictionary is still loading. Try again in a moment.')); return; }
+    var groups = new Map();
+    Spell.currentBad().forEach(function (b) { if (!groups.has(b.word)) groups.set(b.word, []); groups.get(b.word).push(b.range); });
+    if (!groups.size) { box.appendChild(h('p', null, 'No spelling mistakes found.')); return; }
+    box.appendChild(h('p', null, groups.size + ' word' + (groups.size === 1 ? '' : 's') + ' not in the dictionary.'));
+    var ul = h('ul', { class: 'issue-list spell-list' });
+    Array.from(groups.keys()).slice(0, 100).forEach(function (w) {
+      var ranges = groups.get(w), sugBox = h('span', { class: 'sp-sugs' });
+      ul.appendChild(h('li', null,
+        h('button', { type: 'button', class: 'linkish', onclick: function () { var s = window.getSelection(); s.removeAllRanges(); s.addRange(ranges[0]); ranges[0].startContainer.parentNode.scrollIntoView({ block: 'center' }); Ed.rememberRange(); } }, h('strong', null, w), ranges.length > 1 ? ' ×' + ranges.length : ''),
+        sugBox,
+        h('button', { type: 'button', class: 'btn sm ghost', onclick: function () { Spell.ignoreAll(w); setTimeout(function () { fillSpelling(box); }, 300); } }, 'Ignore all'),
+        h('button', { type: 'button', class: 'btn sm ghost', onclick: function () { Spell.addWord(w); setTimeout(function () { fillSpelling(box); }, 300); } }, 'Add')));
+      Spell.suggest(w).then(function (list) {
+        list.slice(0, 4).forEach(function (sg) {
+          sugBox.appendChild(h('button', { type: 'button', class: 'btn sm', title: 'Change every "' + w + '" to "' + sg + '"', onclick: function () {
+            // Change all: replace from the last to the first so earlier ranges stay valid.
+            ranges.slice().reverse().forEach(function (r) { if (r.toString().replace(/\u2019/g, "'") === w) Spell.replace(r, sg); });
+            setTimeout(function () { fillSpelling(box); }, 300);
+          } }, sg));
+        });
+      });
+    });
+    box.appendChild(ul);
+  }
+
   /** Map plain-text offsets (innerText) back to a DOM range. Approximate where innerText adds line breaks. */
   function selectText(start, end) {
     var w = document.createTreeWalker(Ed.el(), NodeFilter.SHOW_TEXT), n, pos = 0, r = document.createRange(), set = false;

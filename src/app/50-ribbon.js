@@ -25,14 +25,15 @@ var Ribbon = (function () {
       { label: 'Text & symbols', items: [{ sel: 'textBox' }, ['signature', 'Signature line…'], { sel: 'dateTime' }, ['equation', 'Equation…'], ['symbol', 'Symbol…']] }
     ] },
     { id: 'layout', label: 'Design & layout', groups: [
-      { label: 'Page background', items: [['pageBorders', 'Page borders…'], { color: 'pageColor', label: 'Page colour', def: '#ffffff' }, ['watermark', 'Watermark…']] },
+      { label: 'Template', items: [{ sel: 'template' }] },
+      { label: 'Page background', items: [['pageBorders', 'Page borders…'], ['pageColorDlg', 'Page colour…', 'Choose a colour for every page'], ['watermark', 'Watermark…']] },
       { label: 'Page setup', items: [{ sel: 'margins' }, { sel: 'orientation' }, { sel: 'size' }, { sel: 'columns' }, { sel: 'breaks' }] },
       { label: 'Paragraph', items: [{ num: 'indentL', label: 'Indent left (mm)' }, { num: 'indentR', label: 'Indent right (mm)' }, { num: 'spBefore', label: 'Space before (pt)' }, { num: 'spAfter', label: 'Space after (pt)' }] },
       { label: 'Arrange', items: [{ sel: 'wrap' }, { sel: 'position' }] }
     ] },
     { id: 'refs', label: 'References', groups: [
       { label: 'Table of contents', items: [['toc', 'Table of contents…'], ['tocUpdate', 'Update table']] },
-      { label: 'Captions', items: [['caption', 'Insert caption…']] },
+      { label: 'Captions', items: [['caption', 'Insert caption…'], ['tof', 'Table of figures…']] },
       { label: 'Footnotes', items: [['footnote', 'Insert footnote…']] }
     ] },
     { id: 'review', label: 'Review', groups: [
@@ -56,12 +57,13 @@ var Ribbon = (function () {
     case: { label: 'Change case', menu: true, options: [['upper', 'UPPERCASE'], ['lower', 'lowercase'], ['title', 'Title Case'], ['sentence', 'Sentence case']] },
     lineSpacing: { label: 'Line spacing', menu: true, options: [['1', '1.0'], ['1.15', '1.15'], ['1.5', '1.5'], ['2', '2.0'], ['2.5', '2.5'], ['3', '3.0']] },
     paraBorder: { label: 'Borders', menu: true, options: [['box', 'Box'], ['top', 'Top'], ['bottom', 'Bottom'], ['left', 'Left bar'], ['none', 'No border']] },
-    style: { label: 'Style', menu: true, options: [['p', 'Normal'], ['title', 'Title'], ['subtitle', 'Subtitle'], ['h1', 'Heading 1'], ['h2', 'Heading 2'], ['h3', 'Heading 3'], ['h4', 'Heading 4'], ['quote', 'Quote'], ['label', 'Label']] },
+    style: { label: 'Style', options: [['p', 'Normal'], ['title', 'Title'], ['subtitle', 'Subtitle'], ['h1', 'Heading 1'], ['h2', 'Heading 2'], ['h3', 'Heading 3'], ['h4', 'Heading 4'], ['quote', 'Quote'], ['label', 'Label']] },
     select: { label: 'Select', menu: true, options: [['all', 'Select all'], ['objects', 'Select objects'], ['similar', 'Select similar formatting']] },
     cover: { label: 'Cover page', menu: true, options: [['corporate', 'Corporate cover'], ['academic', 'Academic cover']] },
     tableTools: { label: 'Table tools', menu: true, options: [['rowAbove', 'Insert row above'], ['rowBelow', 'Insert row below'], ['colLeft', 'Insert column left'], ['colRight', 'Insert column right'], ['delRow', 'Delete row'], ['delCol', 'Delete column'], ['merge', 'Merge cells'], ['split', 'Split cell'], ['shade', 'Cell shading…'], ['cellBorders', 'Cell borders: all'], ['cellNoBorders', 'Cell borders: none'], ['delTable', 'Delete table']] },
     textBox: { label: 'Text box', menu: true, options: [['inline', 'Inline text box'], ['float', 'Floating text box']] },
     dateTime: { label: 'Date & time', menu: true, options: [['dmy', '28/10/2026'], ['dmyhm', '28/10/2026 14:05'], ['long', 'Wednesday, 28 October 2026'], ['week', 'CW44 · FY 2026-27']] },
+    template: { label: 'Template', options: [['personal', 'Personal look'], ['office', 'Office document']] },
     margins: { label: 'Margins', menu: true, options: [['normal', 'Normal (25.4 mm)'], ['narrow', 'Narrow (12.7 mm)'], ['moderate', 'Moderate'], ['wide', 'Wide'], ['custom', 'Custom margins…']] },
     orientation: { label: 'Orientation', menu: true, options: [['portrait', 'Portrait'], ['landscape', 'Landscape']] },
     size: { label: 'Size', menu: true, options: [['A4', 'A4 (210 × 297 mm)'], ['Letter', 'Letter'], ['Legal', 'Legal'], ['A5', 'A5']] },
@@ -155,6 +157,7 @@ var Ribbon = (function () {
       var opts = typeof def.options === 'function' ? def.options() : def.options;
       opts.forEach(function (o) { s.appendChild(h('option', { value: o[0] }, o[1])); });
       if (it.sel === 'fontSize') s.value = '11';
+      if (it.sel === 'style') s.value = 'p';
       s.addEventListener('change', function () {
         var v = s.value;
         if (def.menu) s.value = '';
@@ -200,19 +203,39 @@ var Ribbon = (function () {
     });
     var tr = $('#ribbon [data-cmd="track"]'); if (tr) tr.setAttribute('aria-pressed', String(Review.tracking()));
     var ro = $('#ribbon [data-cmd="readOnly"]'); if (ro && Ed.doc) ro.setAttribute('aria-pressed', String(Ed.doc.protect.mode === 'readonly'));
-    var sp = $('#ribbon [data-cmd="spell"]'); if (sp) sp.setAttribute('aria-pressed', String(Ed.el().spellcheck));
+    var sp = $('#ribbon [data-cmd="spell"]'); if (sp) sp.setAttribute('aria-pressed', String(Spell.enabled()));
     var np = $('#ribbon [data-cmd="navPane"]'); if (np) np.setAttribute('aria-pressed', String(!$('#navPane').hidden));
     var ru = $('#ribbon [data-cmd="ruler"]'); if (ru) ru.setAttribute('aria-pressed', String(Rulers.on()));
     var r = window.getSelection();
     if (r.anchorNode && Ed.el().contains(r.anchorNode)) {
       var e = r.anchorNode.nodeType === 1 ? r.anchorNode : r.anchorNode.parentNode;
+      var st = styleAt(e);
+      var ss = $('#ribbon [data-sel="style"]'); if (ss && ss.value !== st.key) ss.value = st.key;
+      var sb = $('#stStyle'); if (sb) sb.textContent = 'Style: ' + st.name;
       var cs = getComputedStyle(e);
       var fs = $('#ribbon [data-sel="fontSize"]'); if (fs) { var pt = Math.round(parseFloat(cs.fontSize) * PT_PER_PX * 2) / 2; fs.value = String(pt); }
       var fn = $('#ribbon [data-sel="fontName"]'); if (fn) { var fam = cs.fontFamily.split(',')[0].replace(/["']/g, '').trim(); if (Array.prototype.some.call(fn.options, function (o) { return o.value === fam; })) fn.value = fam; }
     }
   }
 
+  /** The paragraph style at the cursor, so people can see which style is in use (Word shows it highlighted). */
+  function styleAt(e) {
+    var b = e.closest('h1,h2,h3,h4,blockquote,p,li,td,th,figcaption,dt,dd');
+    if (!b || !Ed.el().contains(b)) return { key: 'p', name: 'Normal' };
+    var t = b.tagName;
+    if (/^H[1-4]$/.test(t)) return { key: t.toLowerCase(), name: 'Heading ' + t[1] };
+    if (t === 'BLOCKQUOTE' || b.closest('blockquote')) return { key: 'quote', name: 'Quote' };
+    if (b.classList.contains('wn-title')) return { key: 'title', name: 'Title' };
+    if (b.classList.contains('wn-subtitle')) return { key: 'subtitle', name: 'Subtitle' };
+    if (b.classList.contains('wn-label-style')) return { key: 'label', name: 'Label' };
+    if (b.classList.contains('wn-caption')) return { key: 'p', name: 'Caption' };
+    if (t === 'LI') return { key: 'p', name: b.parentNode.tagName === 'OL' ? 'List number' : 'List bullet' };
+    if (t === 'TD' || t === 'TH' || b.closest('td,th')) return { key: 'p', name: (t === 'TH' || b.closest('th')) ? 'Table header' : 'Table text' };
+    return { key: 'p', name: 'Normal' };
+  }
+
   function refreshContext() {
+    var tp = $('#ribbon [data-sel="template"]'); if (tp && Ed.doc) tp.value = Ed.doc.template || 'personal';
     var tt = $('#ribbon [data-sel="tableTools"]');
     if (tt) { var c = Tables.currentCell(); tt.disabled = !c; tt.title = c ? 'Table tools' : 'Place the cursor in a table to use table tools'; }
     ['wrap', 'position'].forEach(function (k) { var s = $('#ribbon [data-sel="' + k + '"]'); if (s) { s.disabled = !Ed.selectedObject(); s.title = Ed.selectedObject() ? '' : 'Select a picture, shape, chart or text box first'; } });
@@ -332,7 +355,7 @@ var CMD = {
     if (v === 'objects') { var objs = $$('.wn-obj, figure, table, .wn-eq', Ed.el()).filter(function (o) { return !o.closest('.wn-gen'); }); if (!objs.length) { toast('There are no pictures, shapes, charts or tables to select.'); return; } var cur = objs.indexOf(Ed.selectedObject()); var nx = objs[(cur + 1) % objs.length]; Ed.selectObject(nx); nx.scrollIntoView({ block: 'center' }); toast('Selected object ' + ((cur + 1) % objs.length + 1) + ' of ' + objs.length + '. Choose again for the next one.'); }
     if (v === 'similar') Review.selectSimilar();
   },
-  spell: function () { var e = Ed.el(); e.spellcheck = !e.spellcheck; toast('Spell check ' + (e.spellcheck ? 'on' : 'off') + '.'); },
+  spell: function () { var on = Spell.toggle(); toast('Spell check ' + (on ? 'on' : 'off') + '.'); Ribbon.refreshState(); },
   // Insert
   cover: function (v) { Insert.cover(v); }, blankPage: function () { Ed.insertNode(h('div', { class: 'wn-pagebreak', contenteditable: 'false' })); Ed.insertNode(h('p', null, h('br'))); Ed.insertNode(h('div', { class: 'wn-pagebreak', contenteditable: 'false' })); },
   pageBreak: function () { Ed.insertNode(h('div', { class: 'wn-pagebreak', contenteditable: 'false' })); },
@@ -340,7 +363,23 @@ var CMD = {
   link: function () { Insert.link(); }, comment: function () { Review.addComment(); }, headerFooter: function () { Insert.headerFooter(); },
   textBox: function (v) { Insert.textBox(v); }, signature: function () { Insert.signature(); }, dateTime: function (v) { Insert.dateTime(v); }, equation: function () { Insert.equation(); }, symbol: function () { Insert.symbol(); },
   // Layout
-  pageBorders: function () { Insert.pageBorders(); }, pageColor: function (c) { Ed.doc.layout.pageColor = c; Ed.changed(); }, watermark: function () { Insert.watermark(); },
+  pageBorders: function () { Insert.pageBorders(); }, pageColor: function (c) { Ed.doc.layout.pageColor = c; Ed.changed(); }, pageColorDlg: function () { Insert.pageColour(); }, watermark: function () { Insert.watermark(); },
+  template: function (v) {
+    var d = Ed.doc; if (!d || d.template === v) return;
+    Ed.snapshot();
+    WN.officeTemplate.switchTemplate(d, v);
+    var stripped = 0;
+    if (v === 'office') {
+      // Office headings are numbered by the template; numbers typed into the text would show twice.
+      $$('h1,h2,h3', Ed.el()).forEach(function (hd) {
+        var w = document.createTreeWalker(hd, NodeFilter.SHOW_TEXT), t = w.nextNode(); if (!t) return;
+        var n = WN.officeTemplate.stripTypedNumber(t.data); if (n !== t.data) { t.data = n; stripped++; }
+      });
+    }
+    Ed.el().classList.toggle('tpl-office', v === 'office');
+    Intake.render(); Layout.applyPageSetup(); Ed.changed();
+    toast(v === 'office' ? 'Office template applied: Verdana 10 pt, numbered headings, controlled-document header and footers.' + (stripped ? ' Removed ' + stripped + ' typed heading number(s).' : '') : 'Personal look applied.');
+  },
   margins: function (v) { if (v === 'custom') { Insert.customMargins(); return; } Ed.doc.layout.margins = v; Ed.changed(); },
   orientation: function (v) { Ed.doc.layout.orientation = v; Ed.changed(); },
   size: function (v) { Ed.doc.layout.size = v; Ed.changed(); },
@@ -352,7 +391,8 @@ var CMD = {
   spAfter: function (v) { var n = +v; if (!(n >= 0 && n <= 200)) { toast('Enter 0 to 200 pt.', 'error'); return; } blocksStyle(function (b) { b.style.marginBottom = n + 'pt'; }); },
   wrap: function (v) { Insert.wrap(v); }, position: function (v) { Insert.position(v); },
   // References
-  toc: function () { Refs.insertToc(); }, tocUpdate: function () { var n = Refs.updateTocs(true); Ed.changed(); toast(n ? 'Table of contents updated.' : 'No table of contents yet. Insert one first.'); },
+  toc: function () { Refs.insertToc(); }, tocUpdate: function () { var r = Refs.updateTocs(true); Ed.changed(); toast(r.count ? 'Updated ' + r.count + ' table' + (r.count === 1 ? '' : 's') + (r.changed ? '.' : ' (already up to date).') : 'There is no table of contents or table of figures yet. Insert one from References first.'); },
+  tof: function () { Refs.tableOfFigures(); },
   caption: function () { Refs.caption(); }, footnote: function () { Refs.footnote(); },
   // Review
   spelling: function () { Review.spellingPanel(); }, wordCount: function () { Review.wordCountDialog(); },

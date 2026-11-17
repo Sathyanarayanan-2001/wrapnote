@@ -155,13 +155,20 @@ var Views = (function () {
     var sp = $('#splitPane'); if (sp.hidden) return;
     var top = sp.scrollTop;
     sp.textContent = '';
-    var c = contentClone(); c.className = 'doc-content split-flow';
+    var c = contentClone(); c.className = 'doc-content split-flow' + (Ed.el().classList.contains('wn-branded') ? ' wn-branded' : '') + (Ed.el().classList.contains('tpl-office') ? ' tpl-office' : '');
+    // The second view keeps the real page width and margins, scaled to fit, so its ruler matches the first view's.
+    var g = Layout.geo(), zoom = 1;
+    if (g) {
+      zoom = Math.max(0.25, Math.min(1.5, (sp.clientWidth - 28) / g.W));
+      c.style.width = g.W + 'px'; c.style.padding = '12px ' + g.mr + 'px 24px ' + g.ml + 'px'; c.style.zoom = zoom;
+    }
     c.addEventListener('click', function (e) {
       var t = e.target.closest('p,li,h1,h2,h3,h4,table,figure,div'); if (!t) return;
       var path = []; var n = t; while (n && n !== c) { path.unshift(Array.prototype.indexOf.call(n.parentNode.children, n)); n = n.parentNode; }
       var m = Ed.el(); path.forEach(function (i) { m = m && m.children[i]; }); if (m) flash(m);
     });
     sp.appendChild(h('div', { class: 'split-label' }, 'Second view (live) · click to jump'));
+    if (g && Rulers.on()) sp.appendChild(h('div', { class: 'split-ruler ruler-h', 'aria-hidden': 'true', html: Rulers.track(g, zoom, 0) + '</div>' }));
     sp.appendChild(c); sp.scrollTop = top;
   }, 300);
 
@@ -238,6 +245,6 @@ var Views = (function () {
     Ed.el().addEventListener('input', function () { drawSplit(); drawNav(); });
   }
 
-  return { flash: flash, printLayout: printLayout, readMode: readMode, outline: outline, focus: focus, immersive: immersive, navPane: navPane, split: split, arrange: arrange,
+  return { redrawSplit: function () { drawSplit(); }, flash: flash, printLayout: printLayout, readMode: readMode, outline: outline, focus: focus, immersive: immersive, navPane: navPane, split: split, arrange: arrange,
     newWindow: newWindow, broadcast: broadcast, sideBySide: sideBySide, syncScroll: syncScroll, multiPages: multiPages, escape: escape, onOpen: onOpen, bind: bind };
 })();
