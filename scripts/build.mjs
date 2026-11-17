@@ -14,7 +14,7 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(join(out, 'icons'), { recursive: true });
 
 // Core modules must load in dependency order (model needs dates, money, safe, text).
-const CORE = ['safe', 'money', 'dates', 'text', 'csv', 'merge', 'diff', 'latex', 'model', 'dashboard'];
+const CORE = ['safe', 'money', 'dates', 'text', 'csv', 'merge', 'diff', 'latex', 'model', 'dashboard', 'pictures'];
 const core = CORE.map((n) => src(`src/core/${n}.js`)).join('\n');
 const appFiles = readdirSync(join(root, 'src/app')).filter((f) => f.endsWith('.js')).sort();
 const app = appFiles.map((f) => `/* ---- ${f} ---- */\n` + src(`src/app/${f}`)).join('\n');
@@ -53,5 +53,23 @@ copyFileSync(join(root, 'public/manifest.webmanifest'), join(out, 'manifest.webm
 for (const f of readdirSync(join(root, 'public/icons'))) copyFileSync(join(root, 'public/icons', f), join(out, 'icons', f));
 writeFileSync(join(out, '.nojekyll'), '');
 
+// Optional OCR engine (Tesseract), served from this site's ocr/ folder and loaded only when text is first requested,
+// so index.html stays small. Only the LSTM builds are copied: the app always runs OEM 1 (LSTM only).
+const ocrDir = join(out, 'ocr');
+mkdirSync(ocrDir, { recursive: true });
+const nm = (p) => join(root, 'node_modules', p);
+const OCR_FILES = [
+  ['tesseract.js/dist/tesseract.min.js', 'tesseract.min.js'],
+  ['tesseract.js/dist/worker.min.js', 'worker.min.js'],
+  ['tesseract.js-core/tesseract-core-lstm.wasm.js', 'tesseract-core-lstm.wasm.js'],
+  ['tesseract.js-core/tesseract-core-simd-lstm.wasm.js', 'tesseract-core-simd-lstm.wasm.js'],
+  ['tesseract.js-core/tesseract-core-relaxedsimd-lstm.wasm.js', 'tesseract-core-relaxedsimd-lstm.wasm.js'],
+  ['@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz', 'eng.traineddata.gz'],
+  ['tesseract.js/LICENSE.md', 'LICENSE-tesseract.js.md'],
+  ['tesseract.js-core/LICENSE', 'LICENSE-tesseract.js-core.txt']
+];
+let ocrBytes = 0;
+for (const [from, to] of OCR_FILES) { copyFileSync(nm(from), join(ocrDir, to)); ocrBytes += readFileSync(nm(from)).length; }
+
 const kb = (n) => (n / 1024).toFixed(1) + ' KB'; // 1 KB = 1,024 bytes
-console.log(`dist/index.html ${kb(html.length)} (gzip ${kb(gzipSync(html).length)}), script ${kb(js.length)}, build ${pkg.version}-${buildId}`);
+console.log(`dist/index.html ${kb(html.length)} (gzip ${kb(gzipSync(html).length)}), script ${kb(js.length)}, build ${pkg.version}-${buildId}; ocr/ ${(ocrBytes / 1048576).toFixed(1)} MB loaded on demand`); // 1 MB = 1,048,576 bytes

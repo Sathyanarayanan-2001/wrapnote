@@ -2,6 +2,25 @@
 
 All notable changes are listed here. Dates are day first. The format follows Keep a Changelog, and versions follow Semantic Versioning.
 
+## [1.1.0] - 17/11/2026
+
+### Fixed
+- Text extraction (OCR) now works in every modern browser. Version 1.0.0 relied on a browser feature most browsers lack.
+- Screenshots added one after another now fill the same 2×2 grid. A later screenshot goes into the next empty slot.
+- Pictures in grids are no longer cropped. Each cell takes the pictures' shape and shows the whole picture.
+- A full 2×2 grid of tall phone screenshots now fits on one page instead of running across a page break.
+- Guide contents links (Getting started, Left pane and the rest) and the "Skip to content" link no longer show "page does not exist".
+- On phones, the page is laid out correctly when you switch from Fields to Document.
+
+### Added
+- Simple ribbon (one row per tab, the default), Full ribbon, and Hide ribbon (Ctrl+F1). The choice is remembered.
+- Empty grid slots you can click to add a picture straight into that grid.
+- Text read from a screenshot in a grid appears in its own "Screenshot text" block after the grid.
+- Guide addresses such as #guide/g-ribbon open the guide at that section; old #g-ribbon bookmarks still work.
+
+### Changed
+- Picture blocks show "Arrange" instead of "Edit" in the block list.
+
 ## [1.0.0] - 16/11/2026
 
 ### Added

@@ -6,10 +6,24 @@ var Pages = (function () {
 
   function route() {
     var r = MODEL.parseRoute(location.hash);
-    if (r.error) toast(r.error + ' Showing ' + (r.page === 'docs' ? 'your documents' : 'the home page') + ' instead.', 'error');
+    // An old in-page link such as #g-ribbon names a section, not a page: open the page that holds it.
+    var raw = location.hash.replace(/^#\/?/, '');
+    if (r.error && r.page === 'home' && /^[\w-]{1,40}$/.test(raw)) {
+      var target = document.getElementById(raw), holder = target && target.closest('.page');
+      if (holder && holder.id === 'page-guide') { history.replaceState(null, '', '#guide/' + raw); r = { page: 'guide', section: raw }; }
+    }
+    if (r.error) toast(r.error + (r.page === 'guide' ? '' : ' Showing ' + (r.page === 'docs' ? 'your documents' : 'the home page') + ' instead.'), 'error');
     if (r.page === 'edit' && Ed.doc && r.id === Ed.doc.id) { show('edit'); return; }
     if (r.page === 'edit' && r.id) { Ed.open(r.id).then(function (ok) { if (ok) show('edit'); else { toast('That document was not found. It may have been deleted.', 'error'); go('#docs'); } }); return; }
     show(r.page);
+    if (r.section) scrollToSection(r.section);
+  }
+
+  function scrollToSection(id) {
+    var el = document.getElementById(id);
+    if (!el || !el.closest('#page-guide')) { toast('That guide section does not exist. Showing the top of the guide.', 'error'); return; }
+    // Wait one frame so the page is laid out before scrolling; the sticky top bar is allowed for by scroll-margin.
+    requestAnimationFrame(function () { el.scrollIntoView({ block: 'start' }); var hd = el.querySelector('h2'); if (hd) { hd.setAttribute('tabindex', '-1'); hd.focus({ preventScroll: true }); } });
   }
 
   function show(page) {
@@ -148,7 +162,7 @@ var Pages = (function () {
     $('#syncFolder').textContent = Sync.folderName() ? 'Folder: ' + Sync.folderName() : 'No folder chosen. Documents stay in this browser only.';
     $('#errCount').textContent = errorLog.length ? errorLog.length + ' entries' : 'No errors recorded.';
     $('#errView').textContent = errorLog.length ? errorLogText() : '';
-    $('#appVersion').textContent = 'Version ' + MODEL.VERSION + ' · 16/11/2026';
+    $('#appVersion').textContent = 'Version ' + MODEL.VERSION + ' · 17/11/2026';
     Sync.render();
     if (navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(function (e) {
       // Explicit conversion: bytes -> MB divides by 1,048,576 (1,024 x 1,024).
@@ -158,6 +172,8 @@ var Pages = (function () {
 
   function bind() {
     window.addEventListener('hashchange', route);
+    // The skip link targets #main; handle it here so the router does not treat "main" as a page.
+    $('.skip').addEventListener('click', function (e) { e.preventDefault(); $('#main').focus(); });
     $$('[data-new]').forEach(function (b) { b.addEventListener('click', function () { createAndOpen(b.getAttribute('data-new')); }); });
     ['docSearch', 'docMode', 'docStatusF', 'docSort'].forEach(function (id) { $('#' + id).addEventListener('input', renderDocs); });
     $('#setTheme').addEventListener('change', function () { settings.set('theme', this.value); applyTheme(); });

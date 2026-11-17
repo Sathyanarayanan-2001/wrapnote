@@ -11,8 +11,9 @@ WrapNote is a browser app for live minutes of meeting, formal reports and study 
 ## Features
 
 - **Guided intake.** Minutes and report mode (date, times, people, agenda, decisions, action items with owner, due date and cost, next meeting). Book and study mode (thesis, concepts, quotes with pages, mind map, active-recall questions, takeaways).
-- **Content blocks.** Text with labels and callouts, smart tables, pictures and screenshots. Several pictures can sit in a grid, side by side, or stacked. Reorder, edit, format or delete blocks from a list.
-- **Six-tab ribbon.** Home, Insert, Design and layout, References, Review and View, with formatting, tables, shapes, charts, equations, cover pages, headers and footers, page numbers, watermarks, contents, captions, footnotes, comments, track changes, compare and protect.
+- **Content blocks.** Text with labels and callouts, smart tables, pictures and screenshots. Pictures sit in a grid, side by side, or stacked, and are never cropped. A screenshot taken later fills the next empty slot of a 2×2 grid. Reorder, arrange, format or delete blocks from a list.
+- **Read text from screenshots.** A built-in text reader (Tesseract) runs on your device, loads only when first needed, and then works offline.
+- **Six-tab ribbon.** Simple (one row), full, or hidden to give the page more room. Home, Insert, Design and layout, References, Review and View, with formatting, tables, shapes, charts, equations, cover pages, headers and footers, page numbers, watermarks, contents, captions, footnotes, comments, track changes, compare and protect.
 - **Real pages.** A4, Letter, Legal or A5; portrait or landscape; margins, borders, columns. Print or save as PDF page for page.
 - **Finish cleanly.** "Confirm end of document" polishes spacing and capitals on this device, adds a summary, updates the contents and locks the document for review.
 - **Dashboard.** Documents per ISO week, by type, category and status; open and overdue actions; action costs by financial year. Every chart has a table view.
@@ -25,6 +26,7 @@ WrapNote is a browser app for live minutes of meeting, formal reports and study 
 
 - No account, no analytics, no server and no network calls with your data.
 - Documents are stored in your browser (IndexedDB). Sync writes only to the folder you pick.
+- Text extraction runs on your device. The text reader's files come from this site; pictures never leave the browser.
 - The repository holds no personal data. Tests use made-up names and amounts.
 
 ## Getting started

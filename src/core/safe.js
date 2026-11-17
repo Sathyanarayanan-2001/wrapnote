@@ -29,7 +29,7 @@
     'border-left', 'border-right', 'border-color', 'border-style', 'border-width', 'border-radius', 'width', 'height',
     'max-width', 'text-indent', 'vertical-align', 'float', 'column-count', 'column-gap', 'column-rule', 'letter-spacing',
     'text-transform', 'list-style-type', 'display', 'position', 'left', 'top', 'z-index', 'opacity', 'transform',
-    'box-shadow', 'white-space', 'font-variant', 'clear'
+    'box-shadow', 'white-space', 'font-variant', 'clear', 'aspect-ratio'
   ]);
 
   /** Keep only known, harmless CSS declarations. Drops url(), expression() and @import. */

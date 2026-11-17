@@ -24,6 +24,8 @@ var Layout = (function () {
     var d = Ed.el();
     $('#sheet').style.width = geo.W + 'px';
     d.style.padding = geo.mt + 'px ' + geo.mr + 'px ' + geo.mb + 'px ' + geo.ml + 'px';
+    // Writing height of one page; picture cells are capped from it so a full 2×2 grid never runs across a page break.
+    d.style.setProperty('--wn-body-h', (geo.H - geo.mt - geo.mb) + 'px');
     d.classList.toggle('wn-branded', !!Ed.doc.layout.branding.on);
     $('#sheet').style.setProperty('--page-color', Ed.doc.layout.pageColor || '#ffffff');
     setZoom(zoomMode, zoom);
@@ -32,11 +34,15 @@ var Layout = (function () {
   /** Main pass. Returns the page count. */
   function run() {
     if (!Ed.doc) return 1;
+    // A hidden page (the phone's Fields view) measures as zero height; keep the last result and lay out when shown.
+    if (!$('#canvas').offsetParent) { run.dirty = true; return pages; }
+    run.dirty = false;
     applyPageSetup();
     var d = Ed.el();
     // 1. Remove previous pushes so we measure natural positions.
     $$('[data-wn-push]', d).forEach(function (n) { n.style.marginTop = n.getAttribute('data-wn-orig') || ''; n.removeAttribute('data-wn-push'); n.removeAttribute('data-wn-orig'); });
     numberThings(d);
+    Intake.refreshAllSlots();
     var kids = Array.prototype.slice.call(d.children);
     // 2. Read pass (one layout).
     var info = kids.map(function (k) {
@@ -181,6 +187,7 @@ var Layout = (function () {
       var pg = h('div', { class: 'pp', style: { width: geo.W + 'px', height: geo.H + 'px' } });
       var bg = h('div', { class: 'pp-bg' }), fg = h('div', { class: 'pp-fg' });
       var content = h('div', { class: 'doc-content pp-content' + (d.classList.contains('wn-branded') ? ' wn-branded' : ''), style: { padding: geo.mt + 'px ' + geo.mr + 'px 0 ' + geo.ml + 'px' } });
+      content.style.setProperty('--wn-body-h', (geo.H - geo.mt - geo.mb) + 'px');
       pageDecor(p, 0, bg, fg, fnPages.get(p));
       pg.appendChild(bg); pg.appendChild(content); pg.appendChild(fg);
       pageEls.push({ el: pg, content: content });
@@ -193,6 +200,8 @@ var Layout = (function () {
       c.removeAttribute('contenteditable');
       $$('[contenteditable]', c).forEach(function (x) { x.removeAttribute('contenteditable'); });
       $$('.wn-selected', c).forEach(function (x) { x.classList.remove('wn-selected'); });
+      $$('.wn-slot', c).forEach(function (x) { x.remove(); });
+      if (c.classList.contains('wn-slot')) return;
       if (pageEls[p]) pageEls[p].content.appendChild(c);
     });
     return { pages: pages, wmm: geo.wmm, hmm: geo.hmm };

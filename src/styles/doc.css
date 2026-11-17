@@ -53,7 +53,17 @@
 .doc-content .wn-lay-side { grid-auto-flow: column; grid-auto-columns: 1fr; grid-template-columns: none; }
 .doc-content .wn-lay-stack { grid-template-columns: 1fr; }
 .doc-content .wn-images .wn-img { margin: 0; }
-.doc-content .wn-lay-grid2 img, .doc-content .wn-lay-grid3 img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border: 1px solid #e2e8f0; }
+.doc-content .wn-images:not(.wn-lay-stack) { align-items: start; }
+/* Grid cells take the pictures' shape (set per block); "contain" scales a picture down whole, so nothing is cut off. */
+/* 247 mm = A4 height 297 mm minus normal margins (2 x 25.4 mm), used where the page size is unknown (exports). */
+.doc-content { --wn-cell-max: calc((var(--wn-body-h, 247mm) - 48px) / 2); }
+.doc-content .wn-lay-stack .wn-img img, .doc-content .wn-obj.wn-img img { max-height: calc(var(--wn-body-h, 247mm) - 48px); width: auto; max-width: 100%; }
+.doc-content .wn-images:not(.wn-lay-stack) .wn-img, .doc-content .wn-slot { max-height: var(--wn-cell-max); }
+.doc-content .wn-images:not(.wn-lay-stack) .wn-img { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; padding: 3pt; background: #f8fafc; border: 1px solid #e2e8f0; min-width: 0; overflow: hidden; }
+.doc-content .wn-images:not(.wn-lay-stack) .wn-img img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.doc-content .wn-slot { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border: 2px dashed #94a3b8; border-radius: 4px; background: #fff; color: #475569; font-size: 9pt; text-align: center; cursor: pointer; min-height: 44px; min-width: 0; user-select: none; }
+.doc-content .wn-slot::after { content: "Empty slot · click to add a picture"; padding: 4pt; }
+.doc-content .wn-slot:hover, .doc-content .wn-slot:focus-visible { border-color: #047857; color: #047857; background: #ecfdf5; }
 .doc-content .wn-ocr { grid-column: 1 / -1; border: 1px dashed #94a3b8; padding: 6pt 8pt; font-family: Consolas, monospace; font-size: 9.5pt; background: #f8fafc; }
 .doc-content .wn-ocr-head { font-weight: 600; font-family: "IBM Plex Sans", sans-serif; }
 .doc-content figure { margin: 6pt 0; }
@@ -124,7 +134,7 @@
 .doc-content.wn-branded h2 { color: #065f46; text-transform: none; }
 @media print {
   .doc-content .wn-pagebreak { border: 0; }
-  .doc-content .wn-pagebreak::after, .doc-content .wn-chart-toggle { display: none; }
+  .doc-content .wn-pagebreak::after, .doc-content .wn-chart-toggle, .doc-content .wn-slot { display: none; }
   .doc-content .wn-comment { background: none; border: 0; }
   .doc-content .wn-selected, .doc-content .wn-similar { outline: 0; }
 }

@@ -1,6 +1,6 @@
 # Setup
 
-Version 1.0.0 · 16/11/2026
+Version 1.1.0 · 17/11/2026
 
 ## What you need
 
@@ -10,9 +10,9 @@ Version 1.0.0 · 16/11/2026
 ## Build and run locally
 
 1. Clone the repository.
-2. Run `npm ci` to install the pinned font package.
+2. Run `npm ci` to install the pinned font and text-reader (OCR) packages.
 3. Run `npm test` to run the unit tests.
-4. Run `npm run build`. This writes `dist/index.html`, the service worker, the manifest and the icons.
+4. Run `npm run build`. This writes `dist/index.html`, the service worker, the manifest, the icons and the `dist/ocr/` text-reader files (about 14 MB; a browser downloads about 7 MB of them on first use).
 5. Run `python -m http.server 8765 --directory dist`.
 6. Open http://localhost:8765/ in Chrome or Edge.
 
@@ -22,8 +22,10 @@ Version 1.0.0 · 16/11/2026
 2. Run `python -m playwright install chromium`.
 3. Keep the local server from step 5 above running.
 4. Run `python tests/e2e/run_e2e.py`.
-5. Run `python tests/e2e/links.py`.
-6. Run `python tests/e2e/usability.py`.
+5. Run `python tests/e2e/run_issues.py`.
+6. Run `python tests/e2e/links.py`.
+7. Run `python tests/e2e/usability.py`.
+8. Run `python tests/e2e/usability_v110.py`.
 
 Each script prints PASS or FAIL per check and exits with code 0 only when everything passes.
 

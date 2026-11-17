@@ -1,6 +1,6 @@
 {
   "name": "wrapnote",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "WrapNote: live minutes, reports and study notes in the browser.",
   "license": "MIT",
@@ -10,7 +10,11 @@
     "icons": "node scripts/make-icons.mjs"
   },
   "devDependencies": {
-    "@fontsource/ibm-plex-sans": "5.2.8"
+    "@fontsource/ibm-plex-sans": "5.2.8",
+    "@tesseract.js-data/eng": "1.0.0",
+    "tesseract.js": "7.0.0"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }

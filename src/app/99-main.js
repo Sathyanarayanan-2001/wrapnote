@@ -54,7 +54,7 @@ function bindCanvasExtras() {
       var pane = b.getAttribute('data-pane');
       $('#edBody').setAttribute('data-phone', pane);
       $$('#phoneSwitch button').forEach(function (x) { x.classList.toggle('active', x === b); x.setAttribute('aria-pressed', String(x === b)); });
-      if (pane === 'doc') Layout.setZoom('auto');
+      if (pane === 'doc') { Layout.setZoom('auto'); Ed.relayout(); }
     });
   });
 }

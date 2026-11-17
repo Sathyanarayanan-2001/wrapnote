@@ -10,7 +10,7 @@
   var text = isNode ? require('./text.js') : g.WN.text;
   var esc = safe.escapeHtml;
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
   var MODES = { mom: 'Minutes and reports', book: 'Book and study notes', blank: 'Blank document' };
   var WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -223,6 +223,11 @@
     if (page === 'edit') {
       if (parts[1] && !ID_RE.test(parts[1])) return { page: 'docs', error: 'That document link is not valid.' };
       return { page: 'edit', id: parts[1] || null };
+    }
+    // Guide sections live under the guide page (#guide/g-ribbon) so they never collide with page names.
+    if (page === 'guide' && parts[1]) {
+      if (!/^g-[a-z]{2,20}$/.test(parts[1])) return { page: 'guide', error: 'That guide section does not exist. Showing the top of the guide.' };
+      return { page: 'guide', section: parts[1] };
     }
     return { page: page };
   }

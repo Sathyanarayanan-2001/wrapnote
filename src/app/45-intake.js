@@ -332,7 +332,91 @@ var Intake = (function () {
   }
 
   /* Pictures and screenshots: ask how to arrange several, and whether to extract text from screenshots. */
-  function addImages(files, kind, fromCanvas) {
+  /* ---------- Picture grids: empty slots, fit-to-cell shape, and joining a grid later ---------- */
+  var lastPictureId = null; // the picture block most recently added to or rearranged
+  var PIC = WN.pictures;
+  function layoutOf(b) { var l = b.getAttribute('data-layout') || ((b.className.match(/wn-lay-(\w+)/) || [])[1]); return PIC.isLayout(l) ? l : 'stack'; }
+  function figuresOf(b) { return $$(':scope > figure.wn-img', b); }
+
+  /** The grid a new picture may join: only the most recent picture block, and only if its grid has room. */
+  function openGrid() {
+    var list = $$('[data-btype="images"], [data-btype="shots"]', Ed.el());
+    var cand = lastPictureId ? list.filter(function (x) { return x.getAttribute('data-block') === lastPictureId; })[0] : null;
+    if (!cand) cand = list[list.length - 1];
+    if (!cand) return null;
+    return PIC.freeSlots(layoutOf(cand), figuresOf(cand).length) > 0 ? cand : null;
+  }
+
+  /** Shows the right number of empty slots and gives every cell the pictures' shape, so nothing is cropped. */
+  function refreshSlots(b) {
+    var layout = layoutOf(b), figs = figuresOf(b), need = PIC.freeSlots(layout, figs.length);
+    var slots = $$(':scope > .wn-slot', b);
+    while (slots.length > need) slots.pop().remove();
+    var anchor = b.querySelector(':scope > .wn-ocr');
+    for (var i = slots.length; i < need; i++) {
+      var sl = h('div', { class: 'wn-slot', contenteditable: 'false', role: 'button', tabindex: '0', 'aria-label': 'Empty slot. Add a picture to this grid.', title: 'Add a picture to this grid' });
+      b.insertBefore(sl, anchor);
+      slots.push(sl);
+    }
+    if (layout === 'stack') { figs.forEach(function (f) { f.style.aspectRatio = ''; if (!f.getAttribute('style')) f.removeAttribute('style'); }); return; }
+    var ratios = [], waiting = false;
+    figs.forEach(function (f) {
+      var img = f.querySelector('img');
+      if (!img) return;
+      if (img.naturalWidth) ratios.push(img.naturalWidth / img.naturalHeight);
+      else if (!img.dataset.wnWait) { waiting = true; img.dataset.wnWait = '1'; img.addEventListener('load', function () { delete img.dataset.wnWait; refreshSlots(b); Ed.relayout(); }, { once: true }); }
+    });
+    if (!ratios.length && waiting) return;
+    var r = String(PIC.cellRatio(ratios));
+    figs.concat(slots).forEach(function (x) { if (x.style.aspectRatio !== r) x.style.aspectRatio = r; });
+  }
+  function refreshAllSlots() { $$('[data-btype="images"], [data-btype="shots"]', Ed.el()).forEach(refreshSlots); }
+
+  function figure(u, kind, n) { return h('figure', { class: 'wn-img' }, h('img', { src: u, alt: (kind === 'shots' ? 'Screenshot ' : 'Picture ') + n })); }
+
+  /** Where extracted text goes. A grid keeps only pictures, so a full 2×2 grid still fits one page; its text
+   * follows in its own block. A stacked block keeps the text inside, as in version 1.0.0. */
+  function ocrBox(block) {
+    if (layoutOf(block) === 'stack') {
+      var inner = block.querySelector(':scope > .wn-ocr');
+      if (!inner) { inner = h('div', { class: 'wn-ocr' }); block.appendChild(inner); }
+      return inner;
+    }
+    var next = block.nextElementSibling;
+    if (next && next.classList.contains('wn-ocr-block')) return next.querySelector('.wn-ocr');
+    var tb = h('div', { class: 'wn-ocr' });
+    var tblock = h('div', { class: 'wn-block wn-text wn-ocr-block', 'data-btype': 'text', 'data-labels': 'Screenshot text', 'data-block': MODEL.uid('b') },
+      h('div', { class: 'wn-labels', contenteditable: 'false' }, h('span', { class: 'wn-label' }, 'Screenshot text')), h('div', { class: 'wn-block-body' }, tb));
+    block.after(tblock);
+    return tb;
+  }
+  /** Moves text out of a block that has just become a grid. */
+  function liftOcr(block) {
+    var inner = block.querySelector(':scope > .wn-ocr');
+    if (!inner || layoutOf(block) === 'stack') return;
+    var box = ocrBox(block);
+    while (inner.firstChild) box.appendChild(inner.firstChild);
+    inner.remove();
+  }
+
+  function appendOcr(block, res, startNo, many) {
+    var tb = ocrBox(block);
+    res.forEach(function (r, i) {
+      if (many) tb.appendChild(h('p', { class: 'wn-ocr-head' }, 'Text from screenshot ' + (startNo + i)));
+      (r.text ? r.text.split(/\n+/) : ['']).forEach(function (line) { tb.appendChild(h('p', null, line || ' ')); });
+    });
+  }
+
+  /** Called when an empty slot is clicked: the chosen pictures go into that grid. */
+  function addToBlock(block) {
+    if (Ed.locked()) { toast('This document is protected. Unlock it first.', 'error'); return; }
+    var f = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true });
+    f.addEventListener('change', function () { addImages(Array.from(f.files), block.getAttribute('data-btype') === 'shots' ? 'shots' : 'images', false, block); f.remove(); });
+    document.body.appendChild(f); f.click();
+  }
+
+  /* Pictures and screenshots: ask whether to extract text from screenshots; join an open grid; ask how to arrange the rest. */
+  function addImages(files, kind, fromCanvas, targetBlock) {
     if (!files.length) return;
     if (Ed.locked()) { toast('This document is protected. Unlock it first.', 'error'); return; }
     var big = files.filter(function (f) { return f.size > 15 * 1048576; });
@@ -341,44 +425,71 @@ var Intake = (function () {
     Promise.all(files.map(function (f) { return readFileAs(f, 'dataurl').then(function (u) { return saver ? compressImage(u, 1600) : u; }); })).then(function (urls) {
       urls = urls.filter(S.isSafeImageSrc);
       if (!urls.length) { toast('Those files are not pictures this tool can show (PNG, JPEG, GIF, WebP).', 'error'); return; }
-      if (fromCanvas && urls.length === 1 && kind === 'images') {
+      if (fromCanvas && urls.length === 1 && kind === 'images' && !targetBlock) {
         var fig = h('figure', { class: 'wn-obj wn-img wrap-inline' }, h('img', { src: urls[0], alt: 'Pasted picture' }));
         Ed.insertNode(fig); return;
       }
       if (fromCanvas && !promptBox) render();
-      var step = kind === 'shots'
+      // A picture dropped on an empty slot is clearly meant as a picture, so no question is asked.
+      var step = kind === 'shots' && !targetBlock
         ? choice('What should happen with ' + (urls.length > 1 ? 'these ' + urls.length + ' screenshots' : 'this screenshot') + '?', [
             { label: 'Extract text (OCR)', value: 'ocr' }, { label: 'Insert screenshot as image', value: 'img', primary: true }, { label: 'Both: image + extracted text', value: 'both' }])
         : Promise.resolve('img');
       return step.then(function (mode) {
         if (!mode) return;
-        var lay = (mode === 'ocr' || urls.length === 1) ? Promise.resolve('stack')
-          : kind === 'shots' ? choice('How should the ' + urls.length + ' screenshots be arranged?', [{ label: 'Grid', value: 'grid2' }, { label: 'Side-by-side', value: 'side' }, { label: 'One-by-one', value: 'stack', primary: true }])
-          : choice('How should the ' + urls.length + ' images be arranged?', [{ label: '2×2 grid', value: 'grid2', primary: true }, { label: '3-column grid', value: 'grid3' }, { label: 'Side-by-side (2-col)', value: 'side' }, { label: 'Stacked one-by-one', value: 'stack' }]);
+        // A text-only result never joins a picture grid; pictures join the open grid first.
+        var target = mode === 'ocr' ? null : (targetBlock && Ed.el().contains(targetBlock) ? targetBlock : openGrid());
+        var plan = PIC.placement(target ? { layout: layoutOf(target), count: figuresOf(target).length } : null, urls.length);
+        var joinUrls = urls.slice(0, plan.join), restUrls = urls.slice(plan.join);
+        var lay = !restUrls.length ? Promise.resolve(null) : (mode === 'ocr' || restUrls.length === 1) ? Promise.resolve('stack')
+          : kind === 'shots' ? choice('How should the ' + restUrls.length + ' screenshots be arranged?', [{ label: 'Grid', value: 'grid2' }, { label: 'Side-by-side', value: 'side' }, { label: 'One-by-one', value: 'stack', primary: true }])
+          : choice('How should the ' + restUrls.length + ' images be arranged?', [{ label: '2×2 grid', value: 'grid2', primary: true }, { label: '3-column grid', value: 'grid3' }, { label: 'Side-by-side (2-col)', value: 'side' }, { label: 'Stacked one-by-one', value: 'stack' }]);
         return lay.then(function (layout) {
-          if (!layout) return;
-          var block = h('div', { class: 'wn-block wn-images wn-lay-' + layout, 'data-btype': kind, 'data-layout': layout });
-          if (mode !== 'ocr') urls.forEach(function (u, i) { block.appendChild(h('figure', { class: 'wn-img' }, h('img', { src: u, alt: (kind === 'shots' ? 'Screenshot ' : 'Picture ') + (i + 1) }))); });
-          if (mode === 'ocr' || mode === 'both') {
-            return OCR.extract(urls).then(function (res) {
-              var tb = h('div', { class: 'wn-ocr' });
-              res.forEach(function (r, i) {
-                if (urls.length > 1) tb.appendChild(h('p', { class: 'wn-ocr-head' }, 'Text from screenshot ' + (i + 1)));
-                (r.text ? r.text.split(/\n+/) : ['']).forEach(function (line) { tb.appendChild(h('p', null, line || ' ')); });
-              });
-              if (!res.some(function (r) { return r.text; })) {
-                toast(OCR.available() ? 'No text was found in the screenshot.' : 'Text extraction is not available in this browser, so the screenshot was inserted as a picture. Type the text in the box below it.', 'error', 9000);
-                if (mode === 'ocr') urls.forEach(function (u, i) { block.appendChild(h('figure', { class: 'wn-img' }, h('img', { src: u, alt: 'Screenshot ' + (i + 1) }))); });
-              }
-              block.appendChild(tb);
-              insertBlock(block);
-            });
-          }
-          insertBlock(block);
+          if (restUrls.length && !layout) return;
+          var wantText = mode === 'ocr' || mode === 'both';
+          var ocr = wantText ? OCR.extract(urls, progressLine()) : Promise.resolve(null);
+          return ocr.then(function (res) {
+            if (wantText) clearProgress();
+            if (res && !res.some(function (r) { return r.text; })) toast(OCR.failureMessage(), 'error', 9000);
+            if (joinUrls.length) joinInto(target, joinUrls, kind, res ? res.slice(0, joinUrls.length) : null, urls.length > 1);
+            if (restUrls.length) newPictureBlock(restUrls, kind, layout, mode, res ? res.slice(joinUrls.length) : null);
+          });
         });
       });
     }).catch(function (e) { logError(e, 'addImages'); toast('Could not add the pictures: ' + e.message, 'error'); });
   }
+
+  function joinInto(block, urls, kind, res, many) {
+    Ed.snapshot();
+    var start = figuresOf(block).length, anchor = block.querySelector(':scope > .wn-slot, :scope > .wn-ocr');
+    urls.forEach(function (u, i) { block.insertBefore(figure(u, kind, start + i + 1), anchor); });
+    if (res) appendOcr(block, res, start + 1, many || start > 0);
+    refreshSlots(block);
+    lastPictureId = block.getAttribute('data-block');
+    Ed.changed(); renderBlocks(); Views.flash(block);
+    var n = figuresOf(block).length, label = { grid2: '2×2 grid', grid3: '3-column grid', side: 'side-by-side pair' }[layoutOf(block)];
+    toast('Added to the ' + label + ' next to the earlier picture (' + (urls.length > 1 ? 'slots ' + (start + 1) + '–' + n : 'slot ' + n) + '). Undo puts it back.');
+  }
+
+  function newPictureBlock(urls, kind, layout, mode, res) {
+    var block = h('div', { class: 'wn-block wn-images wn-lay-' + layout, 'data-btype': kind, 'data-layout': layout });
+    var noText = res && !res.some(function (r) { return r.text; });
+    // Text-only was asked for but nothing was read: keep the picture so no information is lost.
+    if (mode !== 'ocr' || noText) urls.forEach(function (u, i) { block.appendChild(figure(u, kind, i + 1)); });
+    insertBlock(block);
+    if (res) appendOcr(block, res, 1, urls.length > 1);
+    refreshSlots(block);
+    lastPictureId = block.getAttribute('data-block');
+  }
+
+  var progressEl = null;
+  function progressLine() {
+    promptBox.textContent = '';
+    progressEl = h('p', { class: 'prompt ocr-progress', role: 'status' }, 'Reading text… preparing the text reader.');
+    promptBox.appendChild(progressEl);
+    return function (msg) { if (progressEl) progressEl.textContent = msg; };
+  }
+  function clearProgress() { if (progressEl) { progressEl.remove(); progressEl = null; } }
 
   /* ---------- Block list (read from the canvas, so it is always in step) ---------- */
   var renderBlocks = debounce(function () { drawBlocks(); }, 150);
@@ -399,7 +510,8 @@ var Intake = (function () {
         h('span', { class: 'bl-acts' },
           h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Move block ' + (i + 1) + ' up', disabled: i === 0, onclick: function () { move(b, blocks[i - 1], true); } }, '↑'),
           h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Move block ' + (i + 1) + ' down', disabled: i === blocks.length - 1, onclick: function () { move(b, blocks[i + 1], false); } }, '↓'),
-          h('button', { type: 'button', class: 'btn sm', onclick: function () { editBlock(b); } }, 'Edit'),
+          // Picture blocks say "Arrange" because that is what a newcomer looks for to make a 2×2 grid.
+          h('button', { type: 'button', class: 'btn sm', 'aria-label': (type === 'images' || type === 'shots' ? 'Arrange' : 'Edit') + ' block ' + (i + 1), onclick: function () { editBlock(b); } }, type === 'images' || type === 'shots' ? 'Arrange' : 'Edit'),
           h('button', { type: 'button', class: 'btn sm', onclick: function () { formatBlock(b); } }, 'Format'),
           h('button', { type: 'button', class: 'btn sm danger', onclick: function () { Ed.snapshot(); b.remove(); Ed.changed(); drawBlocks(); toast('Block deleted. Use Undo to bring it back.'); } }, 'Delete'))));
     });
@@ -413,7 +525,9 @@ var Intake = (function () {
     if (type === 'text') { textComposer(b); return; }
     if (type === 'images' || type === 'shots') {
       choice('Change the arrangement of these pictures:', [{ label: '2×2 grid', value: 'grid2' }, { label: '3-column grid', value: 'grid3' }, { label: 'Side-by-side', value: 'side' }, { label: 'Stacked', value: 'stack' }]).then(function (v) {
-        if (!v) return; Ed.snapshot(); b.className = b.className.replace(/wn-lay-\w+/, 'wn-lay-' + v); b.setAttribute('data-layout', v); Ed.changed();
+        if (!v) return; Ed.snapshot(); b.className = b.className.replace(/wn-lay-\w+/, 'wn-lay-' + v); b.setAttribute('data-layout', v);
+        liftOcr(b); refreshSlots(b); lastPictureId = b.getAttribute('data-block'); Ed.changed();
+        if (PIC.freeSlots(v, figuresOf(b).length)) toast('Arrangement changed. The next picture you add fills the next empty slot.');
       });
       return;
     }
@@ -431,28 +545,6 @@ var Intake = (function () {
     });
   }
 
-  return { render: render, renderBlocks: renderBlocks, addImages: addImages, choice: choice };
+  return { render: render, renderBlocks: renderBlocks, addImages: addImages, choice: choice, refreshAllSlots: refreshAllSlots, addToBlock: addToBlock };
 })();
 
-/* ---------- Optional OCR: the browser's built-in TextDetector when present, otherwise none ----------
- * Heavy OCR engines (Tesseract, about 10 MB) would break the 2-second load and need network downloads,
- * so the lighter fallback is: insert the picture and let the person type the text. */
-var OCR = (function () {
-  function available() { return typeof window.TextDetector === 'function'; }
-  function extract(urls) {
-    if (!available()) return Promise.resolve(urls.map(function () { return { text: '' }; }));
-    var det;
-    try { det = new window.TextDetector(); } catch (e) { return Promise.resolve(urls.map(function () { return { text: '' }; })); }
-    return Promise.all(urls.map(function (u) {
-      return new Promise(function (res) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = function () { res(null); }; i.src = u; }).then(function (img) {
-        if (!img) return { text: '' };
-        return withRetry(function () { return det.detect(img); }, { tries: 2, timeout: 15000 }).then(function (blocks) {
-          // Reading order: top to bottom, then left to right.
-          blocks.sort(function (a, b) { return (a.boundingBox.top - b.boundingBox.top) || (a.boundingBox.left - b.boundingBox.left); });
-          return { text: blocks.map(function (b) { return b.rawValue; }).join('\n') };
-        }).catch(function (e) { logError(e, 'OCR'); return { text: '' }; });
-      });
-    }));
-  }
-  return { available: available, extract: extract };
-})();

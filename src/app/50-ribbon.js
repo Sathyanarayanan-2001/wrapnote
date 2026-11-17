@@ -72,30 +72,72 @@ var Ribbon = (function () {
     split: { label: 'Split view', menu: true, options: [['off', 'No split'], ['vertical', 'Split side by side'], ['horizontal', 'Split top and bottom']] }
   };
 
+  /* Ribbon display: "simple" puts each tab's commands on one scrollable row (default, much less height);
+   * "full" is the two-row Word-style layout with group labels. Collapsed shows only the tab names. */
+  function mode() { return settings.get('ribbonMode', 'simple') === 'full' ? 'full' : 'simple'; }
+  function setCollapsed(on) {
+    var rb = $('#ribbon');
+    rb.classList.toggle('collapsed', on);
+    if (!isPhone()) settings.set('ribbonCollapsed', on);
+    $$('#ribbon .rb-tab').forEach(function (t) { t.setAttribute('aria-expanded', String(!on)); });
+    var c = $('#rbCollapse');
+    if (c) { c.textContent = on ? 'Show ribbon ▾' : 'Hide ribbon ▴'; c.setAttribute('aria-expanded', String(!on)); }
+    overflowArrows();
+    if (Ed.doc) Layout.setZoom('auto');
+  }
+
   function build() {
-    if (build.first === undefined) { build.first = false; if (isPhone()) $('#ribbon').classList.add('collapsed'); }
+    var rb = $('#ribbon');
+    if (build.first === undefined) {
+      build.first = false;
+      // Phones start folded so the page stays visible; on a computer the last choice is kept.
+      if (isPhone() || settings.get('ribbonCollapsed', false)) rb.classList.add('collapsed');
+      document.addEventListener('keydown', function (e) { if (e.ctrlKey && e.key === 'F1' && Pages.current() === 'edit') { e.preventDefault(); setCollapsed(!rb.classList.contains('collapsed')); } });
+      $('#rbPanel').addEventListener('scroll', debounce(overflowArrows, 60));
+      window.addEventListener('resize', debounce(overflowArrows, 150));
+    }
+    rb.classList.toggle('simple', mode() === 'simple');
+    rb.classList.toggle('full', mode() === 'full');
     var tabs = $('#ribbon .rb-tabs'), panel = $('#ribbon .rb-panel');
     tabs.textContent = '';
     TABS.forEach(function (t) {
-      tabs.appendChild(h('button', { type: 'button', role: 'tab', id: 'rbt-' + t.id, 'aria-controls': 'rbPanel', 'aria-selected': String(t.id === active), 'aria-expanded': String(!$('#ribbon').classList.contains('collapsed')), class: 'rb-tab' + (t.id === active ? ' active' : ''), onclick: function () {
-        var rb = $('#ribbon');
-        // On a phone the panel folds away so the page stays visible; tapping the open tab closes it.
-        if (isPhone()) rb.classList.toggle('collapsed', t.id === active && !rb.classList.contains('collapsed'));
+      tabs.appendChild(h('button', { type: 'button', role: 'tab', id: 'rbt-' + t.id, 'aria-controls': 'rbPanel', 'aria-selected': String(t.id === active), 'aria-expanded': String(!rb.classList.contains('collapsed')), class: 'rb-tab' + (t.id === active ? ' active' : ''), onclick: function () {
+        var collapsed = rb.classList.contains('collapsed');
+        // Phone: tapping the open tab folds the panel away. Everywhere: choosing a tab while folded opens it.
+        if (isPhone() && t.id === active && !collapsed) setCollapsed(true);
+        else if (collapsed) setCollapsed(false);
         active = t.id; build();
       } }, t.label));
     });
+    tabs.appendChild(h('span', { class: 'rb-ctl' },
+      h('button', { type: 'button', id: 'rbMode', title: mode() === 'simple' ? 'Show every command with group names, on two rows' : 'Show each tab on one compact row', onclick: function () { settings.set('ribbonMode', mode() === 'simple' ? 'full' : 'simple'); build(); if (Ed.doc) Layout.setZoom('auto'); } }, mode() === 'simple' ? 'Full ribbon' : 'Simple ribbon'),
+      h('button', { type: 'button', id: 'rbCollapse', 'aria-controls': 'rbPanel', 'aria-expanded': String(!rb.classList.contains('collapsed')), title: 'Show or hide the commands (Ctrl+F1)', onclick: function () { setCollapsed(!rb.classList.contains('collapsed')); } }, rb.classList.contains('collapsed') ? 'Show ribbon ▾' : 'Hide ribbon ▴')));
     panel.textContent = '';
     panel.setAttribute('aria-labelledby', 'rbt-' + active);
+    panel.scrollLeft = 0;
     var tab = TABS.filter(function (t) { return t.id === active; })[0];
     tab.groups.forEach(function (g) {
-      var grp = h('div', { class: 'rb-group', role: 'group', 'aria-label': g.label });
+      var grp = h('div', { class: 'rb-group', role: 'group', 'aria-label': g.label, title: g.label });
       var items = h('div', { class: 'rb-items' });
       g.items.forEach(function (it) { items.appendChild(item(it)); });
       grp.appendChild(items);
       grp.appendChild(h('div', { class: 'rb-glabel' }, g.label));
       panel.appendChild(grp);
     });
-    refreshState(); refreshContext();
+    if (!$('#rbLeft')) {
+      rb.appendChild(h('button', { type: 'button', id: 'rbLeft', class: 'rb-arrow left', 'aria-label': 'Scroll commands left', tabindex: '-1', onmousedown: keepSel, onclick: function () { panel.scrollBy({ left: -panel.clientWidth * 0.7 }); } }, '‹'));
+      rb.appendChild(h('button', { type: 'button', id: 'rbRight', class: 'rb-arrow right', 'aria-label': 'Scroll commands right', tabindex: '-1', onmousedown: keepSel, onclick: function () { panel.scrollBy({ left: panel.clientWidth * 0.7 }); } }, '›'));
+    }
+    refreshState(); refreshContext(); overflowArrows();
+  }
+
+  /** Arrows appear only when the one-row panel is wider than the screen, and only on the side with more commands. */
+  function overflowArrows() {
+    var rb = $('#ribbon'), p = $('#rbPanel'), l = $('#rbLeft'), r = $('#rbRight');
+    if (!rb || !l) return;
+    var show = rb.classList.contains('simple') && !rb.classList.contains('collapsed') && p.scrollWidth > p.clientWidth + 2;
+    l.hidden = !show || p.scrollLeft < 4;
+    r.hidden = !show || p.scrollLeft + p.clientWidth >= p.scrollWidth - 4;
   }
 
   function keepSel(e) { e.preventDefault(); }
