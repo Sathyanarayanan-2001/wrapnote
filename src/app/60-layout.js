@@ -45,18 +45,25 @@ var Layout = (function () {
     Intake.refreshAllSlots();
     var kids = Array.prototype.slice.call(d.children);
     // 2. Read pass (one layout).
-    var info = kids.map(function (k) {
-      var cs = getComputedStyle(k);
-      return { el: k, top: k.offsetTop, h: k.offsetHeight, mt: parseFloat(cs.marginTop) || 0, brk: k.classList.contains('wn-pagebreak'),
+    var padTop = parseFloat(getComputedStyle(d).paddingTop) || 0;
+    var info = kids.map(function (k, i) {
+      var top = k.offsetTop, prev = kids[i - 1];
+      // The editing area is ordinary block layout (flex broke caret movement), so vertical margins collapse.
+      // The visible gap above a block is measured, and a push becomes margin-top = gap + push, which keeps
+      // the result exact whichever margin won the collapse.
+      var gap = prev ? top - (prev.offsetTop + prev.offsetHeight) : top - padTop;
+      return { el: k, top: top, h: k.offsetHeight, gap: Math.max(0, gap), brk: k.classList.contains('wn-pagebreak'),
         fns: k.classList.contains('wn-fnref') ? [k] : $$('.wn-fnref', k) };
     });
     // 3. Arithmetic: two passes so footnote space can be reserved on the page that holds the reference.
-    var reserve = new Map();
+    // An office document's first-page footer is taller than the bottom margin; keep the text clear of it.
+    var base0 = officeReserve();
+    var reserve = new Map(); if (base0) reserve.set(0, base0);
     var plan = paginate(info, reserve);
     var fnPages = new Map();
     plan.assign.forEach(function (pg, i) { info[i].fns.forEach(function (f) { if (!fnPages.has(pg)) fnPages.set(pg, []); fnPages.get(pg).push(f); }); });
     if (fnPages.size) {
-      fnPages.forEach(function (list, pg) { reserve.set(pg, 14 + list.reduce(function (s, f) { return s + 16 * Math.max(1, Math.ceil((f.getAttribute('data-text') || '').length / 90)); }, 0)); });
+      fnPages.forEach(function (list, pg) { reserve.set(pg, (pg === 0 ? base0 : 0) + 14 + list.reduce(function (s, f) { return s + 16 * Math.max(1, Math.ceil((f.getAttribute('data-text') || '').length / 90)); }, 0)); });
       plan = paginate(info, reserve);
       fnPages = new Map();
       plan.assign.forEach(function (pg, i) { info[i].fns.forEach(function (f) { if (!fnPages.has(pg)) fnPages.set(pg, []); fnPages.get(pg).push(f); }); });
@@ -66,13 +73,13 @@ var Layout = (function () {
     info.forEach(function (it, i) {
       pageOf.set(it.el, plan.assign[i]);
       var p = plan.push[i];
-      if (p > 0.5) { it.el.setAttribute('data-wn-push', '1'); it.el.setAttribute('data-wn-orig', it.el.style.marginTop || ''); it.el.style.marginTop = (it.mt + p) + 'px'; }
+      if (p > 0.5) { it.el.setAttribute('data-wn-push', '1'); it.el.setAttribute('data-wn-orig', it.el.style.marginTop || ''); it.el.style.marginTop = (it.gap + p) + 'px'; }
     });
     pages = plan.pages;
     $('#sheet').style.height = (pages * (geo.H + GAP) - GAP) + 'px';
     sizeWrap();
     drawOverlays(fnPages);
-    var tocChanged = Refs.updateTocs(false);
+    var tocChanged = Refs.updateTocs(false).changed;
     if (tocChanged && !run.again) { run.again = true; try { return run(); } finally { run.again = false; } }
     Rulers.draw();
     return pages;
@@ -111,6 +118,11 @@ var Layout = (function () {
       if (n) n.textContent = kind + ' ' + counts[kind];
     });
     $$('.wn-fnref', d).forEach(function (f, i) { f.textContent = String(i + 1); });
+    // Office template: headings are numbered 1, 1.1, 1.1.1 by the template, never typed (shown with CSS from data-num).
+    var office = Ed.doc && Ed.doc.template === 'office';
+    var heads = $$('h1,h2,h3', d).filter(function (hd) { return !hd.closest('.wn-toc, .wn-cover, .wn-gen'); });
+    var nums = office ? WN.officeTemplate.headingNumbers(heads.map(function (hd) { return +hd.tagName[1]; })) : [];
+    heads.forEach(function (hd, i) { if (office && nums[i]) { if (hd.getAttribute('data-num') !== nums[i]) hd.setAttribute('data-num', nums[i]); } else if (hd.hasAttribute('data-num')) hd.removeAttribute('data-num'); });
     var used = new Set();
     $$('h1,h2,h3,h4,.wn-caption,[data-labels]', d).forEach(function (hd) {
       var id = hd.getAttribute('data-wn-id');
@@ -141,10 +153,13 @@ var Layout = (function () {
     if (wm.type === 'text' && wm.text) box.appendChild(h('div', { class: 'pg-wm', style: { opacity: wm.opacity, transform: 'translate(-50%,-50%) rotate(' + (wm.angle || 0) + 'deg)' } }, wm.text));
     if (wm.type === 'image' && S.isSafeImageSrc(wm.image)) box.appendChild(h('img', { class: 'pg-wm-img', src: wm.image, alt: '', style: { opacity: wm.opacity } }));
     bg.appendChild(box);
+    var officeDoc = Ed.doc.template === 'office';
+    if (officeDoc) officeDecor(p, top, fg);
     var br = L.branding;
-    var hdrText = tokens(L.header.text || (br.on ? br.headerText : ''), p), ftrText = tokens(L.footer.text || (br.on ? br.footerText : ''), p);
+    // The office template draws its own header and footers; the personal header, footer and page number are not added on top.
+    var hdrText = officeDoc ? '' : tokens(L.header.text || (br.on ? br.headerText : ''), p), ftrText = officeDoc ? '' : tokens(L.footer.text || (br.on ? br.footerText : ''), p);
     var hy = top + Math.max(10, geo.mt / 2 - 12), fy = top + geo.H - Math.max(10, geo.mb / 2) - 6;
-    if (hdrText || (br.on && br.logo)) {
+    if (hdrText || (!officeDoc && br.on && br.logo)) {
       var hd = h('div', { class: 'pg-head', style: { top: hy + 'px', left: geo.ml + 'px', right: geo.mr + 'px', textAlign: L.header.align || 'center' } });
       if (br.on && S.isSafeImageSrc(br.logo)) hd.appendChild(h('img', { src: br.logo, alt: '', class: 'pg-logo pos-' + br.logoPos }));
       if (hdrText) hd.appendChild(h('span', null, hdrText));
@@ -152,7 +167,7 @@ var Layout = (function () {
     }
     if (ftrText) fg.appendChild(h('div', { class: 'pg-foot', style: { top: fy + 'px', left: geo.ml + 'px', right: geo.mr + 'px', textAlign: L.footer.align || 'center' } }, ftrText));
     var pn = L.pageNumbers;
-    if (pn.show) {
+    if (pn.show && !officeDoc) {
       var st = { textAlign: pn.align };
       if (pn.pos === 'top') Object.assign(st, { top: (top + 10) + 'px', left: geo.ml + 'px', right: geo.mr + 'px' });
       else if (pn.pos === 'margin-left' || pn.pos === 'margin-right') Object.assign(st, { top: (top + geo.H / 2) + 'px', width: '120px', textAlign: 'center' }, pn.pos === 'margin-left' ? { left: (geo.ml / 2 - 60) + 'px', transform: 'rotate(-90deg)' } : { right: (geo.mr / 2 - 60) + 'px', transform: 'rotate(90deg)' });
@@ -166,6 +181,49 @@ var Layout = (function () {
       // Placed just above the bottom margin of that page.
       fb.style.top = (top + geo.H - geo.mb - (14 + fnList.length * 16)) + 'px';
     }
+  }
+
+  /* ---------- Office template header and footers (drawn, like Word's, outside the editable text) ---------- */
+  function officeFields() {
+    var f = WN.officeTemplate.clean(Ed.doc.office);
+    if (f.docTitle === '[DOCUMENT TITLE]' && Ed.doc.title) f.docTitle = Ed.doc.title;
+    return f;
+  }
+  function officeHeader(p, f) {
+    var c = function (txt, cls) { return h('td', { class: cls || '' }, txt); };
+    return h('div', { class: 'pg-head-office' }, h('div', { class: 'ho-cls' }, 'Classification: ' + f.classification),
+      h('table', null, h('tbody', null,
+        h('tr', null, c(f.logo, 'b'), c(f.docType), h('td', { class: 'l' }, h('div', null, 'Doc.: ' + f.docId), h('div', null, 'Rev.: ' + f.revision))),
+        h('tr', null, c(f.organization, 'b'), c(f.docTitle, 'b shade'), h('td', { class: 'l' }, 'Page: ' + (p + 1) + ' / ' + pages)))));
+  }
+  function officeFirstFooter(f) {
+    var r = function (a, b, c2, d2) { return h('tr', null, h('td', { class: 'b' }, a), h('td', null, b), h('td', { class: 'b' }, c2), h('td', null, d2)); };
+    return h('div', { class: 'pg-foot-office first' }, h('table', null, h('tbody', null, r('Language:', f.language, '', ''), r('Author:', f.author, 'Reviewer:', f.reviewer), r('Source:', f.source, 'Approver:', f.approver))),
+      h('div', { class: 'fo-note' }, f.legalNotice));
+  }
+  function officeDecor(p, top, fg) {
+    var f = officeFields(), O = WN.officeTemplate.PAGE_MM;
+    var hd = officeHeader(p, f);
+    Object.assign(hd.style, { top: (top + O.header * MM) + 'px', left: geo.ml + 'px', right: geo.mr + 'px' });
+    fg.appendChild(hd);
+    var ft = p === 0 ? officeFirstFooter(f) : h('div', { class: 'pg-foot-office later' }, f.footerNotice);
+    // Footers grow upwards from their distance to the page edge, as in Word.
+    Object.assign(ft.style, { bottom: 'auto', top: (top + geo.H - O.footer * MM) + 'px', left: geo.ml + 'px', right: geo.mr + 'px', transform: 'translateY(-100%)' });
+    fg.appendChild(ft);
+  }
+  var reserveCache = { key: '', px: 0 };
+  function officeReserve() {
+    if (!Ed.doc || Ed.doc.template !== 'office') return 0;
+    var f = officeFields(), key = JSON.stringify(f) + geo.W + geo.ml + geo.mr;
+    if (reserveCache.key !== key) {
+      var probe = officeFirstFooter(f);
+      Object.assign(probe.style, { visibility: 'hidden', top: '0px', left: geo.ml + 'px', right: geo.mr + 'px' });
+      $('#sheetFg').appendChild(probe);
+      var hgt = probe.offsetHeight; probe.remove();
+      // Space the footer needs above the bottom margin, plus 6 px (4.5 pt) so text never touches it.
+      reserveCache = { key: key, px: Math.max(0, WN.officeTemplate.PAGE_MM.footer * MM + hgt + 6 - geo.mb) };
+    }
+    return reserveCache.px;
   }
 
   function drawOverlays(fnPages) {
@@ -186,7 +244,7 @@ var Layout = (function () {
     for (var p = 0; p < pages; p++) {
       var pg = h('div', { class: 'pp', style: { width: geo.W + 'px', height: geo.H + 'px' } });
       var bg = h('div', { class: 'pp-bg' }), fg = h('div', { class: 'pp-fg' });
-      var content = h('div', { class: 'doc-content pp-content' + (d.classList.contains('wn-branded') ? ' wn-branded' : ''), style: { padding: geo.mt + 'px ' + geo.mr + 'px 0 ' + geo.ml + 'px' } });
+      var content = h('div', { class: 'doc-content pp-content' + (d.classList.contains('wn-branded') ? ' wn-branded' : '') + (d.classList.contains('tpl-office') ? ' tpl-office' : ''), style: { padding: geo.mt + 'px ' + geo.mr + 'px 0 ' + geo.ml + 'px' } });
       content.style.setProperty('--wn-body-h', (geo.H - geo.mt - geo.mb) + 'px');
       pageDecor(p, 0, bg, fg, fnPages.get(p));
       pg.appendChild(bg); pg.appendChild(content); pg.appendChild(fg);
@@ -250,7 +308,15 @@ var Layout = (function () {
 /* ---------- Rulers: centimetre ticks with draggable margin markers ---------- */
 var Rulers = (function () {
   var on = false;
-  function toggle(v) { on = v === undefined ? !on : v; $('#rulerH').hidden = !on; $('#rulerV').hidden = !on; draw(); }
+  function toggle(v) { on = v === undefined ? !on : v; $('#rulerH').hidden = !on; $('#rulerV').hidden = !on; draw(); if (typeof Views !== 'undefined') Views.redrawSplit(); }
+  /** Centimetre track for a page drawn at scale z, used by the main ruler and the split view's ruler. */
+  function track(g, z, left) {
+    var cm = 10 * Layout.MM; // 1 cm = 10 mm
+    var s = '<div class="r-track" style="left:' + left + 'px;width:' + (g.W * z) + 'px">' +
+      '<div class="r-margin" style="left:0;width:' + (g.ml * z) + 'px"></div><div class="r-margin" style="right:0;width:' + (g.mr * z) + 'px"></div>';
+    for (var i = 0; i * cm <= g.W; i++) s += '<span class="r-tick" style="left:' + (i * cm * z) + 'px">' + (i % 2 === 0 ? i : '') + '</span>';
+    return s;
+  }
   function draw() {
     if (!on || !Ed.doc) return;
     var g = Layout.geo(), z = Layout.zoom();
@@ -282,5 +348,5 @@ var Rulers = (function () {
     function up() { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); Ed.changed(); toast('Margins: left ' + L.custom.l + ' mm, right ' + L.custom.r + ' mm.'); }
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   }
-  return { toggle: toggle, draw: draw, on: function () { return on; } };
+  return { toggle: toggle, draw: draw, track: track, on: function () { return on; } };
 })();

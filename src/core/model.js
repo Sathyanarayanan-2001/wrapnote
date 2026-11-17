@@ -5,12 +5,11 @@
   'use strict';
   var isNode = typeof module === 'object' && module.exports;
   var dates = isNode ? require('./dates.js') : g.WN.dates;
-  var money = isNode ? require('./money.js') : g.WN.money;
   var safe = isNode ? require('./safe.js') : g.WN.safe;
   var text = isNode ? require('./text.js') : g.WN.text;
   var esc = safe.escapeHtml;
 
-  var VERSION = '1.1.0';
+  var VERSION = '1.2.0';
   var MODES = { mom: 'Minutes and reports', book: 'Book and study notes', blank: 'Blank document' };
   var WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -91,14 +90,12 @@
   function actionsTable(actions) {
     var rows = actions.filter(function (a) { return String(a.task || '').trim(); });
     if (!rows.length) return '';
-    var hasCost = rows.some(function (a) { return a.cost; });
-    var total = money.sumPaise(rows.map(function (a) { return a.cost || 0; }));
-    var h = '<table class="wn-table wn-style-corporate wn-actions"><thead><tr><th>#</th><th>Task</th><th>Owner</th><th>Due</th>' + (hasCost ? '<th class="num">Cost</th>' : '') + '<th>Status</th></tr></thead><tbody>';
+    // 1.2.0: no Cost column. Costs had no meaning for minutes; any old stored values are kept but not shown.
+    var h = '<table class="wn-table wn-style-corporate wn-actions"><thead><tr><th>#</th><th>Task</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead><tbody>';
     sortActions(rows).forEach(function (a, i) {
-      h += '<tr><td class="num">' + (i + 1) + '</td><td>' + esc(a.task) + '</td><td>' + esc(a.owner || '—') + '</td><td>' + esc(a.due ? dates.formatDMY(a.due) : '—') + '</td>' +
-        (hasCost ? '<td class="num">' + (a.cost ? money.formatPaise(a.cost) : '—') + '</td>' : '') + '<td>' + (a.done ? 'Done' : 'Open') + '</td></tr>';
+      h += '<tr><td class="num">' + (i + 1) + '</td><td>' + esc(a.task) + '</td><td>' + esc(a.owner || '—') + '</td><td>' + esc(a.due ? dates.formatDMY(a.due) : '—') + '</td><td>' + (a.done ? 'Done' : 'Open') + '</td></tr>';
     });
-    h += '</tbody>' + (hasCost ? '<tfoot><tr><td></td><td colspan="3">Total</td><td class="num">' + money.formatPaise(total) + '</td><td></td></tr></tfoot>' : '') + '</table>';
+    h += '</tbody></table>';
     return h;
   }
 
@@ -182,7 +179,7 @@
       id: doc.id, u: doc.u, title: doc.title || (doc.mode === 'book' ? 'Untitled study notes' : doc.mode === 'mom' ? 'Untitled minutes' : 'Untitled document'),
       mode: doc.mode, category: doc.category || 'General', status: doc.status, date: docDate(doc), created: doc.created,
       words: plain === undefined ? 0 : text.countWords(plain),
-      actions: acts.filter(function (a) { return String(a.task || '').trim(); }).map(function (a) { return { task: a.task, owner: a.owner || '', due: a.due || '', cost: a.cost || 0, done: !!a.done }; })
+      actions: acts.filter(function (a) { return String(a.task || '').trim(); }).map(function (a) { return { task: a.task, owner: a.owner || '', due: a.due || '', done: !!a.done }; })
     };
   }
 
@@ -200,14 +197,11 @@
       if (!d.ok) return { ok: false, error: 'Due date: ' + d.error };
       due = d.iso;
     }
-    var c = money.parseRupees(raw.cost === undefined ? '' : raw.cost);
-    if (!c.ok) return { ok: false, error: 'Cost: ' + c.error };
-    if (c.paise < 0) return { ok: false, error: 'Cost cannot be negative.' };
     var st = String(raw.status === undefined ? '' : raw.status).trim();
     var done;
     if (STATUS_DONE.test(st)) done = true; else if (STATUS_OPEN.test(st)) done = false;
     else return { ok: false, error: 'Status "' + st + '" is not recognised. Use Open or Done.' };
-    return { ok: true, value: { task: task, owner: String(raw.owner || '').trim().slice(0, 120), due: due, cost: c.paise, done: done } };
+    return { ok: true, value: { task: task, owner: String(raw.owner || '').trim().slice(0, 120), due: due, done: done } };
   }
 
   var ID_RE = /^[A-Za-z0-9_-]{1,64}$/;

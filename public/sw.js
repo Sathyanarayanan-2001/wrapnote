@@ -3,7 +3,8 @@
  * Icons and manifest: cache first. Cache names use the "wrapnote-" prefix because every
  * project on one github.io account shares this origin, and only our own caches are ever deleted. */
 const CACHE = 'wrapnote-{{BUILD}}';
-const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png'];
+// word.js (the Word export engine, about 90 KB) is cached at install so Word export also works offline.
+const SHELL = ['./', 'index.html', 'word.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

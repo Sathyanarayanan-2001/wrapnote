@@ -16,10 +16,29 @@ var Intake = (function () {
     if (d.mode === 'book') pane.appendChild(bookFields(d.fields.book));
     if (d.mode === 'blank') pane.appendChild(h('p', { class: 'hint' }, 'Blank mode has no structured fields. Type straight into the page, or add blocks below.'));
     if (d.mode === 'mom') pane.appendChild(branding());
+    if (d.template === 'office') pane.appendChild(officeFields());
     pane.appendChild(blockAdder());
     pane.appendChild(h('div', { id: 'blockList' }));
     renderBlocks();
     Ed.applyLock();
+  }
+
+  /** Document control fields of the office template (header, first-page footer, later-page footer). */
+  var officeRelayout = debounce(function () { Ed.relayout(); }, 200);
+  function officeFields() {
+    var d = doc(), f = d.office;
+    var box = h('details', { class: 'fields office-fields', open: true }, h('summary', null, 'Document control (header and footers)'),
+      h('p', { class: 'hint' }, 'These show in the page header and footers and in Word. Keep the [BRACKETS] until the approved wording is known.'));
+    var grid = h('div', { class: 'grid2' });
+    WN.officeTemplate.FIELDS.forEach(function (x) {
+      var id = 'off-' + x[0];
+      var inp = h('input', { type: 'text', id: id, maxlength: 200, value: f[x[0]] || '', placeholder: x[2], 'data-office': x[0] });
+      inp.addEventListener('input', function () { d.office[x[0]] = this.value.slice(0, 200); Ed.saveSoon(); officeRelayout(); });
+      inp.addEventListener('change', function () { if (!this.value.trim()) { d.office[x[0]] = x[2]; this.value = x[2]; Ed.saveSoon(); officeRelayout(); } });
+      grid.appendChild(h('div', { class: 'fld' }, h('label', { for: id }, x[1]), inp));
+    });
+    box.appendChild(grid);
+    return box;
   }
 
   function switchMode(mode) {
@@ -149,8 +168,6 @@ var Intake = (function () {
 
   var dateCol = { key: 'due', label: 'Due', ph: 'dd/mm/yyyy', inputmode: 'numeric', cls: 'w-date', show: function (v) { return v ? D.formatDMY(v) : ''; },
     parse: function (v) { if (!v.trim()) return { ok: true, value: '' }; var r = D.parseDMY(v, new Date().getFullYear()); return r.ok ? { ok: true, value: r.iso } : r; } };
-  var costCol = { key: 'cost', label: 'Cost ₹', ph: 'Cost ₹', inputmode: 'decimal', cls: 'w-cost', show: function (v) { return v ? M.formatPaise(v, { symbol: false }) : ''; },
-    parse: function (v) { var r = M.parseRupees(v); if (!r.ok) return r; if (r.paise < 0) return { ok: false, error: 'Cost cannot be negative.' }; return { ok: true, value: r.paise }; } };
 
   function momFields(f) {
     return h('div', { class: 'fields' },
@@ -162,8 +179,8 @@ var Intake = (function () {
       chips('People present', 'present'), chips('People absent', 'absent'),
       text('Agenda items', 'agenda', { area: true, rows: 3, hint: 'One item per line.' }),
       text('Key decisions', 'decisions', { area: true, rows: 3, hint: 'One decision per line.' }),
-      rows('Action items', 'actions', [{ key: 'task', label: 'Task', cls: 'w-task' }, { key: 'owner', label: 'Owner', cls: 'w-owner' }, dateCol, costCol, { key: 'done', label: 'Done', type: 'check' }],
-        function () { return { id: MODEL.uid('a'), task: '', owner: '', due: '', cost: 0, done: false }; }),
+      rows('Action items', 'actions', [{ key: 'task', label: 'Task', cls: 'w-task' }, { key: 'owner', label: 'Owner', cls: 'w-owner' }, dateCol, { key: 'done', label: 'Done', type: 'check' }],
+        function () { return { id: MODEL.uid('a'), task: '', owner: '', due: '', done: false }; }),
       h('div', { class: 'grid2' }, dateField('Next meeting date', 'nextDate'), timeField('Next meeting time', 'nextTime')));
   }
 

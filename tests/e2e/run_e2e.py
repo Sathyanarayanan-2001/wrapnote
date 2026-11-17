@@ -121,18 +121,18 @@ def run_all(p):
     page.fill('#intake [data-key="agenda"]', 'Status\nRisks')
     page.fill('#intake [data-key="decisions"]', 'Extend pilot by 2 weeks')
     # two actions
-    for t, o, d, cst, done in [('Update the plan', 'K. Iyer', '04/11/2026', '12,500.50', False), ('Book the venue', 'M. Das', '02/11/2026', '7,499.50', True)]:
+    for t, o, d, done in [('Update the plan', 'K. Iyer', '04/11/2026', False), ('Book the venue', 'M. Das', '02/11/2026', True)]:
         page.click('.rows-fld:has-text("Action items") .rows-head button:text-is("+ Add")')
         row = page.locator('.rows-fld:has-text("Action items") .row-ed').last
         row.locator('input[aria-label^="Task"]').fill(t); row.locator('input[aria-label^="Owner"]').fill(o)
-        row.locator('input[aria-label^="Due"]').fill(d); row.locator('input[aria-label^="Cost"]').fill(cst)
+        row.locator('input[aria-label^="Due"]').fill(d)
         if done: row.locator('input[type=checkbox]').check()
     settle(page)
     gen = page.inner_text('#docEl .wn-gen')
     check('F3 date line derived', '28/10/2026', True, '28/10/2026 (Wed) · CW44 · FY 2026-27' in gen)
     check('F3 midnight crossing duration', '23:30 to 00:45', True, '23:30–00:45 (1 h 15 min, ends next day)' in gen)
     check('F3 present count', '3 names', True, 'Present (3):' in gen)
-    check('F3 action total exact', '12,500.50 + 7,499.50', True, '₹20,000.00' in gen)
+    check('F3 action table has no cost column (1.2.0)', 'two actions without cost', [False, ['#', 'Task', 'Owner', 'Due', 'Status']], ['₹' in gen, page.eval_on_selector_all('#docEl .wn-actions thead th', 't=>t.map(x=>x.textContent)')])
     order = page.evaluate("[...document.querySelectorAll('#docEl .wn-actions tbody tr td:nth-child(2)')].map(t=>t.textContent)")
     check('F3 actions sorted by due date', 'due 04/11 and 02/11', ['Book the venue', 'Update the plan'], order)
     check('F3 safe meeting link rendered', 'https link', 1, page.locator('#docEl .wn-meta a[href="https://meet.example.org/abc"]').count())
@@ -401,7 +401,8 @@ def run_all(p):
     raw = open(dl.value.path(), 'rb').read()
     text = raw.decode('utf-8')
     check('F28 CSV has UTF-8 BOM', 'export actions', True, raw.startswith(b'\xef\xbb\xbf'))
-    check('F28 CSV rows with lakh-free small amounts and dd/mm dates', '2 actions', True, 'Book the venue,M. Das,02/11/2026,"7,499.50",Done' in text and '"12,500.50",Open' in text)
+    # Hand-worked: Mon 02/11/2026 starts ISO week 45 (Wed 28/10 is in CW44), so both actions are CW45.
+    check('F28 CSV rows with dd/mm dates, ISO week and FY, no cost column', '2 actions', True, 'Book the venue,M. Das,02/11/2026,Done,CW45,FY 2026-27' in text and 'Update the plan,K. Iyer,04/11/2026,Open,CW45,FY 2026-27' in text and 'Cost' not in text)
     csv_in = 'Exported from a made-up tracker\nGenerated 01/11/2026\n\nAction Item,Assignee,Deadline,Amount,State\nDraft memo,Asha,05/11/2026,"1,23,456.78",Open\n,Nobody,05/11/2026,10,Open\nCheck date,Ravi,31/02/2026,5,Open\nClose out,Zed,,0.05,Done\n'
     page.click('.rows-fld .rows-head button:text-is("Import CSV")')
     page.set_input_files('dialog.dlg input[type=file]', {'name': 'actions.csv', 'mimeType': 'text/csv', 'buffer': csv_in.encode()})
@@ -413,26 +414,20 @@ def run_all(p):
     check('F29 nothing saved before Import', 'preview open', 2, before_n)
     dlg_fill_click(page, 'Import'); settle(page, 900)
     acts = page.evaluate('WN.debug.doc().fields.mom.actions')
-    check('F29 import adds only valid rows', '2 ready rows', [4, 12345678, 5], [len(acts), acts[2]['cost'], acts[3]['cost']])
+    check('F29 import adds only valid rows; an Amount column is ignored', '2 ready rows', [4, 'Draft memo', 'Close out', False], [len(acts), acts[2]['task'], acts[3]['task'], 'cost' in acts[2]])
 
     # ---------- F31 dashboard figures vs independent computation ----------
     page.goto(BASE + '#dash'); settle(page, 600)
     metas = page.evaluate('WN.debug.metas()')
     exp_docs = len(metas)
     exp_open = sum(1 for m in metas for a in m['actions'] if not a['done'])
-    exp_cost = sum(a['cost'] for m in metas for a in m['actions'])
-    def inr(paise):
-        r, p_ = divmod(paise, 100); s = str(r)
-        if len(s) > 3:
-            head, tail = s[:-3], s[-3:]; parts = []
-            while len(head) > 2: parts.insert(0, head[-2:]); head = head[:-2]
-            if head: parts.insert(0, head)
-            s = ','.join(parts) + ',' + tail
-        return f'₹{s}.{p_:02d}'
+    today = page.evaluate('WN.dates.localISO()')
+    exp_over = sum(1 for m in metas for a in m['actions'] if not a['done'] and a['due'] and a['due'] < today)
+    exp_acts = sum(len(m['actions']) for m in metas)
     kpis = page.eval_on_selector_all('#kpis .kpi-value', 'k=>k.map(x=>x.textContent)')
     check('F31 dashboard documents count', 'Python count of metas', str(exp_docs), kpis[0])
     check('F31 dashboard open actions', 'Python count of open actions', str(exp_open), kpis[2])
-    check('F31 dashboard cost total to the paisa', f'Python sum = {exp_cost} paise', inr(exp_cost), kpis[4])
+    check('F31 dashboard overdue actions and no cost tile (1.2.0)', f'Python count = {exp_over}', [str(exp_over), 4], [kpis[3], len(kpis)])
     page.click('.chart-card:has-text("Action items") button:text-is("Table")')
     rows = page.eval_on_selector_all('.chart-card:has-text("Action items") tbody tr', 'r=>r.map(x=>x.textContent)')
     check('F31 chart/table toggle shows numbers', 'Table view', True, len(rows) == 3)
@@ -451,7 +446,7 @@ def run_all(p):
     p2.click('dialog.dlg .dlg-actions button:text-is("Import")'); settle(p2, 900)
     m2 = p2.evaluate('WN.debug.metas()')
     check('F30 round trip counts match', f'{exp_docs} docs', exp_docs, len(m2))
-    check('F30 round trip totals match to the paisa', f'{exp_cost} paise', exp_cost, sum(a['cost'] for m in m2 for a in m['actions']))
+    check('F30 round trip action counts match', f'{exp_acts} actions', exp_acts, sum(len(m['actions']) for m in m2))
     check('F30 round trip word counts match', 'sum of words', sum(m['words'] for m in metas), sum(m['words'] for m in m2))
     ctx2.close()
 

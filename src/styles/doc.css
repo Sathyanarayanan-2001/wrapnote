@@ -94,6 +94,15 @@
 .doc-content .wn-eq { display: inline-block; font-size: 12pt; padding: 0 2pt; }
 .doc-content .wn-eq.block { display: block; text-align: center; margin: 6pt 0; font-size: 14pt; }
 .doc-content .wn-caption { font-size: 9.5pt; color: #334155; font-style: italic; margin: 2pt 0 10pt; }
+/* A captioned picture shrinks to its picture's width, so the caption is centred under (or over) that picture. */
+.doc-content figure.has-caption:not(.wn-images figure) { display: table; margin-left: auto; margin-right: auto; }
+.doc-content figure > figcaption.wn-caption { display: table-caption; caption-side: bottom; text-align: center; margin: 3pt 0 8pt; }
+.doc-content figure > figcaption.wn-caption:first-child { caption-side: top; }
+.doc-content .wn-images .wn-img.has-caption { flex-direction: column; }
+.doc-content .wn-images .wn-img.has-caption img { flex: 1; min-height: 0; }
+.doc-content .wn-images .wn-img > figcaption.wn-caption { display: block; width: 100%; }
+.doc-content p.wn-caption + table, .doc-content table + p.wn-caption { margin-top: 2pt; }
+.doc-content p.wn-caption[data-kind="Table"] { text-align: center; break-after: avoid; }
 .doc-content .wn-capnum { font-weight: 600; font-style: normal; }
 .doc-content .wn-fnref { color: #047857; font-weight: 600; cursor: pointer; font-size: 7.5pt; }
 .doc-content .wn-toc { border: 1px solid #e2e8f0; padding: 8pt 12pt; margin: 6pt 0 12pt; background: #fafafa; }
@@ -138,3 +147,27 @@
   .doc-content .wn-comment { background: none; border: 0; }
   .doc-content .wn-selected, .doc-content .wn-similar { outline: 0; }
 }
+
+/* ---------- 1.2.0 Office document template ----------
+ * Values match the Word styles WrapNote writes: body Verdana 10 pt with 6 pt after and 1.2 line spacing;
+ * Heading 1 14 pt (12 pt before, 9 pt after), Heading 2 12 pt (18 / 7), Heading 3 11 pt (12 / 10), all bold black;
+ * heading numbers from the template sit in a 42.55 pt (851 twips) slot, as in Word. */
+.doc-content.tpl-office { font-family: Verdana, "DejaVu Sans", Geneva, sans-serif; font-size: 10pt; line-height: 1.46; color: #000; }
+.doc-content.tpl-office p { margin: 0 0 6pt; }
+.doc-content.tpl-office h1, .doc-content.tpl-office h2, .doc-content.tpl-office h3, .doc-content.tpl-office h4 { color: #000; font-weight: 700; font-style: normal; line-height: 1.25; border: 0; }
+.doc-content.tpl-office h1 { font-size: 14pt; margin: 12pt 0 9pt; }
+.doc-content.tpl-office h2 { font-size: 12pt; margin: 18pt 0 7pt; }
+.doc-content.tpl-office h3 { font-size: 11pt; margin: 12pt 0 10pt; }
+.doc-content.tpl-office h4 { font-size: 10pt; margin: 8pt 0 4pt; }
+.doc-content.tpl-office h1[data-num]::before, .doc-content.tpl-office h2[data-num]::before, .doc-content.tpl-office h3[data-num]::before { content: attr(data-num); display: inline-block; min-width: 42.55pt; }
+.doc-content.tpl-office .wn-title { text-align: center; font-size: 20pt; font-weight: 700; margin: 18pt 0 6pt; line-height: 1.44; }
+.doc-content.tpl-office .wn-subtitle { text-align: center; font-size: 16pt; font-weight: 700; color: #000; margin: 0 0 6pt; }
+.doc-content.tpl-office .wn-off-attrs { margin-bottom: 6pt; }
+.doc-content.tpl-office table { font-size: 10pt; margin: 4pt 0 8pt; }
+.doc-content.tpl-office td, .doc-content.tpl-office th { border: 0.5pt solid #808080; padding: 2pt 5.4pt; color: #000; }
+.doc-content.tpl-office thead th, .doc-content.tpl-office tbody th[scope=row], .doc-content.tpl-office .wn-off-attr th { background: none; color: #000; font-weight: 700; }
+.doc-content.tpl-office .wn-toc-title { font-size: 14pt; font-weight: 700; margin: 12pt 0 12pt; }
+.doc-content.tpl-office .wn-toc li { font-weight: 400; }
+.doc-content.tpl-office .wn-toc li.lvl-1 { font-weight: 700; }
+.doc-content .wn-toc li a .tnum { display: inline-block; min-width: 2.6em; }
+.doc-content.tpl-office .wn-toc li a { color: #000; }

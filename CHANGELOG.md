@@ -2,6 +2,32 @@
 
 All notable changes are listed here. Dates are day first. The format follows Keep a Changelog, and versions follow Semantic Versioning.
 
+## [1.2.0] - 17/11/2026
+
+### Fixed
+- The cursor no longer jumps to another line. Text typed directly into the page stays where it was typed, and Up and Down move row by row through a table and out of it, as in Word.
+- References, **Update table** now updates every table of contents and table of figures and says how many ("Updated 1 table"). It used to say there was no table when the table was already up to date.
+- Captions attach to the item you choose and sit inside it: centred under a picture, chart or shape, above a table.
+- Spell check marks a misspelt word as soon as you finish typing it, with suggestions on right-click.
+- **Page colour** opens a palette (Pale green, Pale blue and others, or any colour). It used to apply white. The colour prints and goes into Word.
+- The second pane of a split view has its own ruler and shows the page at its real width and margins.
+- The style list and the status bar show the style at the cursor (Heading 2, Normal, Quote…).
+- Word export is a real .docx file. Tables keep their borders and repeat their header row on each page; headings, lists, pictures and formatting match the app.
+
+### Added
+- **Office document**: a brand-neutral controlled-document template with a classification line and control table in the header (Page X / Y), a different first-page footer, cover page, revision history, table of contents and ten numbered sections. Document-control fields on the left. Template switch in Design & layout.
+- **Import Word template** in Settings. The template is checked and cleaned on the device (pictures, comments, tracked changes, labels, custom data and names removed; schema errors repaired; missing styles added) and then used for office exports.
+- **Table of figures** (References).
+- Spelling settings: turn spell check on or off, and keep your own word list.
+- `scripts/template-tool.mjs` (audit, sanitize, check) and `npm run template:check` in CI.
+
+### Changed
+- Action items have no cost any more: the field, the Cost column, the cost tile and chart on the dashboard and the CSV column are gone. Costs saved by earlier versions stay in your data but are not shown.
+- The Word engine loads on first export (and is cached for offline use), so the app opens faster.
+
+### Removed
+- The old "Word (.doc)" export. Bookmarks or buttons that asked for it now make a .docx.
+
 ## [1.1.0] - 17/11/2026
 
 ### Fixed

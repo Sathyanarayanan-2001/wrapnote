@@ -1,7 +1,9 @@
 # Python packages for the browser tests. Exact versions only.
 playwright==1.63.0
 pillow==12.3.0
+python-docx==1.2.0
 # Node packages are pinned in package.json and package-lock.json:
 #   @fontsource/ibm-plex-sans==5.2.8 (development only; embedded into the build)
 #   tesseract.js==7.0.0, tesseract.js-core==7.0.0, @tesseract.js-data/eng==1.0.0 (copied into ocr/, loaded only when text is read)
-# index.html itself loads nothing else; the OCR files are optional and same-site.
+#   nspell==2.1.5, dictionary-en-gb==3.0.0 (bundled into spell/ with esbuild==0.28.2, loaded when the editor opens)
+# index.html itself loads nothing else; the OCR and spelling files are optional and same-site.

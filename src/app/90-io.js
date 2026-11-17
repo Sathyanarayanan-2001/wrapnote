@@ -4,7 +4,6 @@ var IO = (function () {
     task: ['task', 'action', 'action item', 'action items', 'item', 'description', 'what', 'activity'],
     owner: ['owner', 'assignee', 'assigned to', 'responsible', 'who', 'person', 'owner name'],
     due: ['due', 'due date', 'deadline', 'by', 'target date', 'date due'],
-    cost: ['cost', 'amount', 'budget', 'cost ₹', 'cost (₹)', 'cost inr', 'value', 'rs', 'inr'],
     status: ['status', 'state', 'done', 'progress']
   };
 
@@ -15,7 +14,7 @@ var IO = (function () {
     var rows = [];
     metas.forEach(function (m) {
       MODEL.sortActions(m.actions || []).forEach(function (a) {
-        rows.push([m.title, a.task, a.owner, a.due ? D.formatDMY(a.due) : '', a.cost ? M.formatPaise(a.cost, { symbol: false }) : '', a.done ? 'Done' : 'Open',
+        rows.push([m.title, a.task, a.owner, a.due ? D.formatDMY(a.due) : '', a.done ? 'Done' : 'Open',
           a.due ? D.isoWeek(a.due).label : '', a.due ? D.financialYear(a.due).label : '']);
       });
     });
@@ -25,7 +24,7 @@ var IO = (function () {
     var metas = all ? Store.metas().sort(function (a, b) { return String(a.date).localeCompare(String(b.date)) || String(a.title).localeCompare(String(b.title)); }) : [Store.meta(Ed.doc.id)];
     var rows = actionRows(metas.filter(Boolean));
     if (!rows.length) { toast('There are no action items to export yet.', 'error'); return; }
-    download('wrapnote-actions-' + stamp() + '.csv', WN.csv.toCSV(['Document', 'Task', 'Owner', 'Due date', 'Cost (₹)', 'Status', 'ISO week', 'Financial year'], rows), 'text/csv;charset=utf-8');
+    download('wrapnote-actions-' + stamp() + '.csv', WN.csv.toCSV(['Document', 'Task', 'Owner', 'Due date', 'Status', 'ISO week', 'Financial year'], rows), 'text/csv;charset=utf-8');
   }
 
   /** CSV import: finds the header after any preamble, matches columns by alias, previews each row, saves nothing until Import. */
@@ -45,7 +44,7 @@ var IO = (function () {
         if (!hd) { preview.appendChild(h('p', { class: 'hint err' }, 'No header row with a "Task" column was found in the first 30 lines. Add a header row such as: Task, Owner, Due date, Cost, Status.')); return; }
         var found = Object.keys(hd.map).map(function (k) { return k + ' = column ' + (hd.map[k] + 1) + ' ("' + rows[hd.index][hd.map[k]] + '")'; });
         preview.appendChild(h('p', null, 'Header found on line ' + (hd.index + 1) + '. Matched: ' + found.join('; ') + '.'));
-        var t = h('table', { class: 'data-table' }, h('thead', null, h('tr', null, ['Line', 'Status', 'Task', 'Owner', 'Due', 'Cost', 'Done'].map(function (x) { return h('th', null, x); }))));
+        var t = h('table', { class: 'data-table' }, h('thead', null, h('tr', null, ['Line', 'Status', 'Task', 'Owner', 'Due', 'Done'].map(function (x) { return h('th', null, x); }))));
         var tb = h('tbody');
         var ref = Ed.doc.fields.mom.date ? +Ed.doc.fields.mom.date.slice(0, 4) : new Date().getFullYear();
         rows.slice(hd.index + 1).forEach(function (r, i) {
@@ -55,7 +54,7 @@ var IO = (function () {
           if (v.ok) good.push(v.value);
           tb.appendChild(h('tr', { class: v.ok ? '' : 'bad' }, h('td', { class: 'num' }, String(hd.index + 2 + i)), h('td', null, v.ok ? 'Ready' : 'Skipped: ' + v.error),
             h('td', null, v.ok ? v.value.task : String(raw.task || '')), h('td', null, v.ok ? v.value.owner : ''), h('td', null, v.ok && v.value.due ? D.formatDMY(v.value.due) : ''),
-            h('td', { class: 'num' }, v.ok && v.value.cost ? M.formatPaise(v.value.cost) : ''), h('td', null, v.ok ? (v.value.done ? 'Yes' : 'No') : '')));
+            h('td', null, v.ok ? (v.value.done ? 'Yes' : 'No') : '')));
         });
         t.appendChild(tb); preview.appendChild(t);
         preview.appendChild(h('p', null, good.length + ' row' + (good.length === 1 ? '' : 's') + ' ready to import.'));
@@ -135,14 +134,11 @@ var IO = (function () {
     if (kind === 'pdf') { Layout.print(); return; }
     if (kind === 'saveas') { saveAs(); return; }
     if (kind === 'html') { download(name + '.html', standaloneHTML(title, c.innerHTML + footnotesHtml(c)), 'text/html;charset=utf-8'); return; }
-    if (kind === 'doc') {
-      // Word opens HTML saved with the Word namespaces as a normal document (.doc).
-      var L = Ed.doc.layout, g = Layout.geo();
-      var head = (L.header.text || (L.branding.on ? L.branding.headerText : '')), foot = (L.footer.text || (L.branding.on ? L.branding.footerText : ''));
-      var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>' + esc(title) + '</title><style>@page { size: ' + g.wmm + 'mm ' + g.hmm + 'mm; margin: ' + g.mm.map(function (x) { return x + 'mm'; }).join(' ') + '; } ' + $('#doc-css').textContent + '</style></head><body>' +
-        (head ? '<p style="text-align:' + L.header.align + ';color:#475569;font-size:9pt">' + esc(head.replace(/\{[a-z]+\}/g, '')) + '</p>' : '') + c.innerHTML + footnotesHtml(c) +
-        (foot ? '<p style="text-align:' + L.footer.align + ';color:#475569;font-size:9pt">' + esc(foot.replace(/\{[a-z]+\}/g, '')) + '</p>' : '') + '</body></html>';
-      download(name + '.doc', '﻿' + html, 'application/msword'); return;
+    if (kind === 'docx' || kind === 'doc') {
+      // 1.2.0: a real Word document (Office Open XML). The old HTML-as-.doc lost borders, styles and lists.
+      toast('Making the Word file…');
+      Docx.exportDocx(name).then(function () { toast('Word file saved: ' + name + '.docx'); }).catch(function (e) { logError(e, 'docx export'); toast('The Word file could not be made: ' + e.message, 'error'); });
+      return;
     }
     if (kind === 'md') { download(name + '.md', toMarkdown(c), 'text/markdown;charset=utf-8'); return; }
     if (kind === 'txt') { download(name + '.txt', Review.textOf(c.innerHTML), 'text/plain;charset=utf-8'); return; }
@@ -240,8 +236,8 @@ var IO = (function () {
     var d = Ed.doc, items = [];
     if (d.mode === 'mom') {
       var f = d.fields.mom, acts = f.actions.filter(function (a) { return String(a.task || '').trim(); });
-      var open = acts.filter(function (a) { return !a.done; }).length, cost = M.sumPaise(acts.map(function (a) { return a.cost || 0; }));
-      items.push(MODEL.lines(f.decisions).length + ' decision(s) recorded; ' + acts.length + ' action item(s), ' + open + ' open' + (cost ? '; action costs ' + M.formatPaise(cost) : '') + '.');
+      var open = acts.filter(function (a) { return !a.done; }).length;
+      items.push(MODEL.lines(f.decisions).length + ' decision(s) recorded; ' + acts.length + ' action item(s), ' + open + ' open' + '.');
       var owners = {}; acts.forEach(function (a) { if (!a.done && a.owner) owners[a.owner] = (owners[a.owner] || 0) + 1; });
       var ow = Object.keys(owners).sort(function (a, b) { return owners[b] - owners[a] || a.localeCompare(b); });
       if (ow.length) items.push('Open actions by owner: ' + ow.map(function (o) { return o + ' (' + owners[o] + ')'; }).join(', ') + '.');

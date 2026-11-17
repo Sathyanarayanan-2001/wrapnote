@@ -1,5 +1,6 @@
 // Build: inline fonts, CSS and JavaScript into one dist/index.html, add a CSP with the script's hash,
-// and copy the service worker, manifest and icons. No dependencies beyond Node itself.
+// and copy the service worker, manifest and icons. The spell-check worker is bundled with esbuild
+// (a dev dependency) because nspell is written as CommonJS modules.
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync, existsSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
@@ -14,7 +15,7 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(join(out, 'icons'), { recursive: true });
 
 // Core modules must load in dependency order (model needs dates, money, safe, text).
-const CORE = ['safe', 'money', 'dates', 'text', 'csv', 'merge', 'diff', 'latex', 'model', 'dashboard', 'pictures'];
+const CORE = ['safe', 'money', 'dates', 'text', 'csv', 'merge', 'diff', 'latex', 'model', 'dashboard', 'pictures', 'officeTemplate'];
 const core = CORE.map((n) => src(`src/core/${n}.js`)).join('\n');
 const appFiles = readdirSync(join(root, 'src/app')).filter((f) => f.endsWith('.js')).sort();
 const app = appFiles.map((f) => `/* ---- ${f} ---- */\n` + src(`src/app/${f}`)).join('\n');
@@ -47,6 +48,10 @@ html = html.replace('{{CSP}}', () => csp).replace('{{FONTS}}', () => fonts).repl
 if (/\{\{[A-Z_]+\}\}/.test(html)) throw new Error('Unfilled placeholder in shell.html');
 writeFileSync(join(out, 'index.html'), html);
 
+// Word engine, loaded on first export or template import (same site, so the page's security policy allows it).
+const word = `${src('src/core/zip.js')}\n${src('src/core/ooxml.js')}\n(function () {\n'use strict';\n${src('src/word/docx.js')}\n})();\n`;
+writeFileSync(join(out, 'word.js'), word);
+
 const buildId = createHash('sha256').update(html).digest('hex').slice(0, 10);
 writeFileSync(join(out, 'sw.js'), src('public/sw.js').replace('{{BUILD}}', `${pkg.version}-${buildId}`));
 copyFileSync(join(root, 'public/manifest.webmanifest'), join(out, 'manifest.webmanifest'));
@@ -71,5 +76,18 @@ const OCR_FILES = [
 let ocrBytes = 0;
 for (const [from, to] of OCR_FILES) { copyFileSync(nm(from), join(ocrDir, to)); ocrBytes += readFileSync(nm(from)).length; }
 
+// Spell checker: nspell and the en-GB Hunspell dictionary, in a worker loaded when the editor first opens.
+const spellDir = join(out, 'spell');
+mkdirSync(spellDir, { recursive: true });
+const esbuild = await import('esbuild');
+await esbuild.build({ entryPoints: [join(root, 'src/spell/worker.js')], bundle: true, minify: true, format: 'iife', platform: 'browser',
+  target: ['es2019'], outfile: join(spellDir, 'worker.js'), legalComments: 'eof', logLevel: 'warning' });
+const SPELL_FILES = [
+  ['dictionary-en-gb/index.aff', 'en-GB.aff'], ['dictionary-en-gb/index.dic', 'en-GB.dic'],
+  ['dictionary-en-gb/license', 'LICENSE-dictionary-en-gb.txt'], ['nspell/license', 'LICENSE-nspell.txt']
+];
+let spellBytes = readFileSync(join(spellDir, 'worker.js')).length;
+for (const [from, to] of SPELL_FILES) { copyFileSync(nm(from), join(spellDir, to)); spellBytes += readFileSync(nm(from)).length; }
+
 const kb = (n) => (n / 1024).toFixed(1) + ' KB'; // 1 KB = 1,024 bytes
-console.log(`dist/index.html ${kb(html.length)} (gzip ${kb(gzipSync(html).length)}), script ${kb(js.length)}, build ${pkg.version}-${buildId}; ocr/ ${(ocrBytes / 1048576).toFixed(1)} MB loaded on demand`); // 1 MB = 1,048,576 bytes
+console.log(`dist/index.html ${kb(html.length)} (gzip ${kb(gzipSync(html).length)}), script ${kb(js.length)}, build ${pkg.version}-${buildId}; word.js ${kb(word.length)}, ocr/ ${(ocrBytes / 1048576).toFixed(1)} MB and spell/ ${kb(spellBytes)} loaded on demand`); // 1 MB = 1,048,576 bytes

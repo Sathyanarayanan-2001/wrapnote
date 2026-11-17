@@ -1,18 +1,18 @@
 # Setup
 
-Version 1.1.0 · 17/11/2026
+Version 1.2.0 · 17/11/2026
 
 ## What you need
 
-- Node.js 20 or newer (the build and unit tests use only Node itself plus one font package).
+- Node.js 20 or newer. The build uses the pinned font, text-reader and spelling packages and esbuild (all development dependencies).
 - Python 3.10 to 3.13 for the browser tests (Playwright).
 
 ## Build and run locally
 
 1. Clone the repository.
-2. Run `npm ci` to install the pinned font and text-reader (OCR) packages.
+2. Run `npm ci` to install the pinned font, text-reader (OCR), spelling (nspell, en-GB dictionary) and esbuild packages.
 3. Run `npm test` to run the unit tests.
-4. Run `npm run build`. This writes `dist/index.html`, the service worker, the manifest, the icons and the `dist/ocr/` text-reader files (about 14 MB; a browser downloads about 7 MB of them on first use).
+4. Run `npm run build`. This writes `dist/index.html`, the Word engine `dist/word.js`, the service worker, the manifest, the icons, the `dist/spell/` spell checker (about 570 KB) and the `dist/ocr/` text-reader files (about 14 MB; a browser downloads about 7 MB of them on first use).
 5. Run `python -m http.server 8765 --directory dist`.
 6. Open http://localhost:8765/ in Chrome or Edge.
 
@@ -26,8 +26,22 @@ Version 1.1.0 · 17/11/2026
 6. Run `python tests/e2e/links.py`.
 7. Run `python tests/e2e/usability.py`.
 8. Run `python tests/e2e/usability_v110.py`.
+9. Run `python tests/e2e/run_issues_v120.py` (writes sample .docx files to `tests/e2e/reports/`, which is not committed).
+10. Run `python tests/e2e/usability_v120.py`.
 
 Each script prints PASS or FAIL per check and exits with code 0 only when everything passes.
+
+## Check a Word template
+
+The same checks the app runs when you import a template:
+
+1. `node scripts/template-tool.mjs audit my-template.docx` lists styles, missing roles, fonts, fields and privacy findings (counts only).
+2. `node scripts/template-tool.mjs sanitize my-template.docx clean.docx` removes personal and organisation data, repairs schema errors, and adds missing styles.
+3. `npm run template:check` audits WrapNote's built-in template; CI runs it and fails if a role, font, field or table rule is missing.
+
+Never commit a template or a .docx: `.gitignore` excludes them and a unit test fails if one is present.
+
+To look at an exported file without Word: `soffice --headless --convert-to pdf file.docx` (LibreOffice; install `libreoffice-math` too, or equations are left out of the PDF).
 
 ## Regenerate the icons
 

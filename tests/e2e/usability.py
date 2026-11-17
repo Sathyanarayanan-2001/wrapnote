@@ -37,12 +37,12 @@ with sync_playwright() as p:
         pg.get_by_label('From').fill('10:00'); pg.get_by_label('To', exact=True).fill('11:00')
         pg.wait_for_timeout(500)
         assert '1 h' in pg.get_by_label('Document page').inner_text()
-    def t2(pg):  # Add an action item with an owner, due date and cost.
+    def t2(pg):  # Add an action item with an owner and due date (1.2.0: no cost).
         pg.locator('.rows-head', has_text='Action items').get_by_role('button', name='+ Add').click()
         pg.get_by_label('Task 1').fill('Send the summary'); pg.get_by_label('Owner 1').fill('Asha')
-        pg.get_by_label('Due 1').fill('20/11/2026'); pg.get_by_label('Cost ₹ 1').fill('1,500')
+        pg.get_by_label('Due 1').fill('20/11/2026')
         pg.wait_for_timeout(500)
-        assert '₹1,500.00' in pg.get_by_label('Document page').inner_text()
+        assert '20/11/2026' in pg.get_by_label('Document page').inner_text()
     def t3(pg):  # Add two pictures arranged side by side.
         pg.get_by_role('button', name='Images. Click, drop, or select and press Ctrl+V')
         pg.locator('.adder input[type=file]').first.set_input_files([{'name': 'a.png', 'mimeType': 'image/png', 'buffer': png()}, {'name': 'b.png', 'mimeType': 'image/png', 'buffer': png()}])
@@ -60,7 +60,7 @@ with sync_playwright() as p:
         pg.locator('.chart-card', has_text='Action items').get_by_role('button', name='Table').click()
         assert pg.get_by_role('cell', name='Open, on time').count() == 1
 
-    for name, fn in [('1 Start minutes and fill title, date and time', t1), ('2 Add an action item with cost', t2), ('3 Add two pictures side by side', t3),
+    for name, fn in [('1 Start minutes and fill title, date and time', t1), ('2 Add an action item with owner and due date', t2), ('3 Add two pictures side by side', t3),
                      ('4 Confirm the end of the document', t4), ('5 Read open actions on the dashboard', t5)]:
         task(name, fn, pg)
     b.close()

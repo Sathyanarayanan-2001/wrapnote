@@ -1,12 +1,152 @@
 # Quality report
 
-Version 1.1.0 · 17/11/2026
+Version 1.2.0 · 17/11/2026
 
-Part A covers version 1.1.0: four reported issues, how they were reproduced, fixed and checked. Part B is the unchanged 1.0.0 report.
+Part A covers version 1.2.0: nine reported issues and the cost removal, how they were reproduced, fixed and checked. Part B is the 1.1.0 report and Part C the 1.0.0 report, both unchanged except for their letters.
 
-# Part A. Version 1.1.0
+# Part A. Version 1.2.0
 
-## A1. The four reported issues
+**Headline: Word-true export, office template, live spelling.**
+
+## A1. The reported issues
+
+Every issue was first reproduced on 1.1.0 by `tests/e2e/run_issues_v120.py` (baseline: 3 of 16 checks passed; the 3 that passed covered behaviour that was already right). Each check states its input and the result worked out by hand.
+
+| # | Issue | Fix | Checks |
+|---|---|---|---|
+| 1 | Cursor jumps to strange lines in tables and text | Editing area changed from a flex column to ordinary block layout; the caret is put back after stray text is wrapped; Up and Down move by table row | C1–C3 |
+| 2 | Update table says there is no table | `updateTocs` returns how many tables it found, not only whether one changed | U1–U2 |
+| 3 | Captions not aligned with the picture; no table of figures | Caption goes inside the chosen figure, centred; "Attach to" list; Table of figures command | F1–F4 |
+| 4 | Spell check not working as words are typed | On-device checker (nspell, en-GB) in a worker; CSS highlights; right-click suggestions | S1–S3, O8 |
+| 5 | Page colour not working | Palette dialog; colour in print and Word | P1–P2 |
+| 6 | No ruler in the second split pane | Second pane at real page width with its own ruler | R1 |
+| 7 | Style in use not shown | Style list and status bar follow the cursor | Y1 |
+| 7b | Cost has no meaning on action items | Removed from fields, table, dashboard, CSV, import; stored values kept | A1–A2, unit and golden tests |
+| 8 | Word export wrong (no borders, content differs) | Real .docx writer; fonts mapped; template styles | W1–W8 |
+| 9 | Office template and template import | Built-in neutral template; import with audit, clean-up and completion; CLI tool and CI check | O1–O8, T1–T4, X1 |
+
+## A2. Root causes (5 Whys and fishbone)
+
+**5 Whys: the cursor jumped (issue 1).**
+1. Why did text appear on another line? The caret was moved to the last paragraph.
+2. Why? `normalize()` wraps stray top-level text in a paragraph and then placed the caret at the end of the last paragraph.
+3. Why stray text? Browsers sometimes type straight into the editing root.
+4. Why did Down skip rows? The editing root was a flex column (1.0.0 used it to stop margins collapsing), and Chrome's caret movement in flex containers and tables moves to the next cell instead of the next row.
+5. Why was that not caught? No test pressed arrow keys or typed into the root. Fix: keep the caret; block layout with margin-collapse-aware pagination; Word-like row movement; tests C1–C3.
+
+**5 Whys: Update table (issue 2).** The command reported "No table of contents yet" → it tested the return value → the function returned "changed", not "found" → an up-to-date table returns false → the message was written for a different meaning. Fix: return `{ count, changed }`; test U1 uses an up-to-date table.
+
+**Fishbone: Word export differed from the app (issue 8).**
+- Method: 1.1.0 wrote HTML named .doc. Word's HTML importer ignores CSS classes, so tables lost borders and styles.
+- Material: the exported body had no `.doc-content` wrapper, so even the inline styles did not match.
+- Machine: Word has no IBM Plex Sans and substituted at random.
+- Measurement: no test opened the exported file. Now W1–W8 unzip and parse it, and every round also validates the files against the Office schemas and renders them.
+
+**Page colour (issue 5).** The button applied its own starting value, white.
+
+**Spell check (issue 4).** The app relied on the browser's `spellcheck` attribute; browsers mark words late or not at all in long editable areas.
+
+## A3. Defects found while verifying 1.2.0
+
+| # | Found by | Defect | Fix |
+|---|---|---|---|
+| 1 | Unit test (hand-worked value) | `stripTypedNumber` removed "2026" from "2026 budget" | Only one or two digits per number part |
+| 2 | Render check | Heading numbering for a skipped level (H1, H3, H2) gave 1, 1.1.1, 1.1 on screen but 1, 1.1.1, 1.2 in the rendered Word file | Screen numbering follows Word |
+| 3 | Browser test O5 | Quotes in field codes were written as `&quot;` | Element text keeps literal quotes (both are valid XML; this matches Word) |
+| 4 | Template tool on itself | Theme fonts not declared in the font table; page-number results counted as header text | Fonts declared; digits ignored |
+| 4b | Unit test | The audit missed comments that have only a range start | Range starts counted too |
+| 5 | Schema validation of the cleaned reference | The reference itself broke the Word schema (cell settings out of order, shading without a value) | `sanitize` repairs both; cleaned copy passes |
+| 6 | Appearance, render | Comment highlight and change colours were baked into Word text | Screen-only marks skipped (W8) |
+| 7 | Appearance, render | Cover table's first row bold although it is not a header row | Table style's first-row look only when a header row exists |
+| 8 | Appearance, render | No space under tables in Word | Next paragraph gets 8 pt before |
+| 9 | Appearance, app | "Approver" underlined as misspelt in the template | Short office vocabulary added to the dictionary (O8) |
+| 10 | Usability walkthrough | "Insert caption" with nothing selected picked the cover table, not the picture just added | Default is the uncaptioned item before the cursor, else the latest picture |
+| 11 | Appearance round 2, render | Imported template with unnumbered headings: contents entries still showed numbers | Numbers dropped when the template's headings are unnumbered (T4) |
+| 12 | Lighthouse | First paint slower: 1.7–1.8 s against 1.4–1.5 s in 1.1.0 | Word engine moved to `word.js`, loaded on first use and cached at install (X1) |
+
+Test-side corrections (not app defects): one hand-worked ISO week was wrong (02/11/2026 is CW45, not CW44); one hand-worked millimetre value was wrong (2477 twips = 43.69 mm, not 43.70); two test selectors and one escaping error in a test were fixed.
+
+## A4. Verification counts
+
+Two methods for each output: browser checks plus file checks.
+
+| Round | Unit (Node) | Browser: 1.0.0 suite | 1.1.0 issues | 1.2.0 issues | Links | Walkthroughs | .docx files |
+|---|---|---|---|---|---|---|---|
+| Baseline on 1.1.0 | 51 / 51 | 110 / 110 | 27 / 27 | 3 / 16 | 65 / 65 | 10 / 10 | not applicable |
+| Round 1, functional | 59 / 62 (defect 1, defect 4b, one wrong hand value) | 109 / 110 (one wrong hand value in the test) | 27 / 27 | 28 / 29 (O5) | 66 / 66 | 1.2.0 walkthrough 3 / 5 (defect 10, two selectors) | 2 / 2 valid |
+| Round 1, appearance | screenshots at 1366, 320, 360, 390 px; renders of the exported files | | | | | | defects 6–9 |
+| Round 2, functional | 65 / 65 | 110 / 110 | 27 / 27 | 38 / 38 | 66 / 66 | 15 / 15 | 4 / 4 valid |
+| Round 2, appearance | renders compared with the reference render page by page | | | | | | defect 11 |
+| Regression after defect 11 | 65 / 65 | — | — | 39 / 39 | — | — | 4 / 4 valid |
+
+File checks for every exported .docx: the Office schema validator (all parts), python-docx (opens, styles and properties read back), and LibreOffice 24.2 rendering to PDF and images. The built-in template renders to 3 pages, the same as the reference render; header, footers, cover, tables and numbering match. Microsoft Word itself is not available on the build machine, so "opens in Word" is not claimed beyond these checks.
+
+Golden examples (rubric: correct, complete, format followed): 5 / 5 scored 3 of 3. G1 and G5 changed: costs were removed, so they now check that old stored costs never show.
+
+Scenario tests still in the suites and passing: midnight crossing, month end, 29/02/2024, CW53 (31/12/2026), FY boundary (31/03 and 01/04/2027), export and import round trip, phone widths 320, 360 and 390 px (no sideways scrolling on the editor with the office fields, or on Settings).
+
+## A5. Performance
+
+| Measure | Before | After | How |
+|---|---|---|---|
+| First contentful paint (Lighthouse 13.6, mobile, throttled) | 1,713–1,813 ms (3 runs, Word engine inline) | 1,548–1,670 ms (3 runs) | `word.js` loaded on first use |
+| index.html | 632.0 KB (212.2 KB gzip) | 537.5 KB (184.6 KB gzip) | same |
+| Lighthouse scores | 98 / 100 / 100 | 98–99 / 100 / 100 | performance / accessibility / best practices |
+| Slowest action: Word export, 10 pictures (1200 × 800) and 10 charts, 4.7 MB | median 219 ms (6 runs, 151–235) | median 204.5 ms (6 runs, 180–247) | built-in base64 decoder; CRC-32 eight bytes per step |
+| of which reading the page | median 54 ms | median 42 ms | |
+| of which packing | median 27.5 ms | median 23 ms | |
+| Word export, the walkthrough document | — | 26–34 ms in the app | |
+| Spell check pass, 58-page document | — | 10–18 ms (worker, after typing stops for 120 ms) | |
+| Suggestions for one word | — | 2–21 ms | |
+| Layout pass, 58 pages | — | 7–9 ms | |
+
+The export gain is small (about 7 % overall); the rest of the time is the browser drawing the charts as pictures, which runs in parallel already. It is stated as measured.
+
+## A6. FMEA additions
+
+RPN = severity × occurrence × detection, each 1 to 10.
+
+| Area | Failure mode | Effect | Cause | S | O | D | RPN | Control | RPN after |
+|---|---|---|---|---|---|---|---|---|---|
+| Import | Imported template carries organisation data | Data published or sent on | Labels, logos, names in properties, header text | 8 | 6 | 6 | 288 | `sanitize` removes them; audit lists header wording to review; neutral properties | 64 |
+| Import | Imported template breaks the Word schema | File will not open in strict readers | Errors in the source file | 6 | 3 | 5 | 90 | Repairs; schema validation in each round | 24 |
+| Import | Template lacks a style WrapNote writes | Plain text in Word | Different style set | 5 | 6 | 4 | 120 | `completeStyles` adds the missing roles; `template:check` in CI | 20 |
+| Evaluation | Word misspelt not marked, or a correct word marked | Missed mistake or distraction | Dictionary gaps | 3 | 5 | 4 | 60 | Office vocabulary; Add to dictionary; Ignore all | 30 |
+| Evaluation | Spell check slows typing | Lag | Whole-page pass | 5 | 2 | 3 | 30 | Worker; 120 ms debounce; cache per word; measured 10–18 ms | 15 |
+| Evaluation | Heading numbers differ between screen and Word | Wrong references | Different counting rules | 6 | 3 | 4 | 72 | Same rule as Word; render check | 18 |
+| Storage | Old documents lose cost data | Data loss | Field removed | 7 | 2 | 3 | 42 | Values kept untouched in storage; only display removed | 14 |
+| Reporting | .docx invalid | Word repairs or refuses the file | Element order, missing parts | 8 | 3 | 3 | 72 | Schema validation, python-docx and rendering every round; W5 parses every part | 16 |
+| Reporting | Word pages differ from screen pages | Contents page numbers off | Word's own layout | 4 | 6 | 5 | 120 | Fields cached and refreshed by Word on open; guide says so | 48 |
+| Reporting | Word export offline fails | No export | Engine not cached | 6 | 3 | 3 | 54 | Cached at install; X1 | 12 |
+| Reporting | Template file committed to the public repository | Organisation data published | Developer error | 9 | 2 | 6 | 108 | .gitignore; privacy unit test (hashed words, no .docx allowed) | 18 |
+
+## A7. DMAIC
+
+- **Define.** Nine reported issues and the cost removal; keep everything else working; the template must stay brand-neutral.
+- **Measure.** Baseline on 1.1.0: 3 / 16 new checks; Word file not a real .docx; first paint 1.4–1.5 s.
+- **Analyse.** Section A2.
+- **Improve.** Sections A1 and A3: 10 reported items and 12 more defects fixed.
+- **Control.** CI runs the unit tests, `template:check`, all browser suites and three walkthroughs. A privacy test blocks template files and organisation names. Golden examples 5 / 5.
+
+## A8. Stage checkpoints
+
+| Stage | Deliverables | Tests run | Unresolved | Exit |
+|---|---|---|---|---|
+| 1. Reproduce | `run_issues_v120.py` on 1.1.0 | 16 checks, 3 pass | none | Pass |
+| 2. Editor fixes | Issues 1, 2, 3, 5, 6, 7, 7b | C, U, F, P, R, Y, A checks; 110 + 27 regression | none | Pass |
+| 3. Spell check | Worker, highlights, menu, settings | S1–S3; timing | Dictionary gaps (defect 9, fixed at stage 6) | Pass |
+| 4. Word writer | zip, ooxml, converter | W1–W8; schema, python-docx, render | none | Pass |
+| 5. Office template and tool | Template, import, CLI, CI check | O1–O8, T1–T4; tool on itself and on the reference | Header wording left for review (by design) | Pass |
+| 6. Appearance and performance | Defects 6–12 | Renders, screenshots, Lighthouse, timings | none | Pass |
+| 7. Documents and CI | Guide, README, CHANGELOG, ARCHITECTURE, SETUP, TEMPLATE-AUDIT, this report, workflow | Round 2 and regression | none | Pass |
+
+## A9. Usability test (scripted, 1.2.0)
+
+Five tasks done only through visible labels: start an office document and set the reviewer (2 taps to the document); caption a picture and add a table of figures; fix a misspelt word from its suggestions; colour the pages pale green; export to Word. Result 5 / 5 after defect 10 was fixed. It is a script, not a session with a real person.
+
+# Part B. Version 1.1.0
+
+## B1. The four reported issues
 
 | # | Report | Reproduced by (failed on 1.0.0) |
 |---|---|---|
@@ -20,7 +160,7 @@ The worked example from the request is pinned as tests G1–G7:
 - Input: screenshot A (9:16, like 1080 × 1920), then **Arrange** → 2×2 grid, then screenshot B.
 - Expected and observed: A shows whole (both colour bands visible in a pixel check). B fills slot 2. Slots 3 and 4 stay empty and ready.
 
-## A2. Root causes (analyse)
+## B2. Root causes (analyse)
 
 **Issue 1, 5 Whys.**
 1. Why did OCR fail? The browser had no TextDetector.
@@ -57,7 +197,7 @@ Root cause: no height budget. Fix: a one-row simple ribbon (80 px), a full optio
 
 Root cause: two meanings of # and a test that did not click. Fix: guide links became `#guide/g-…`; old `#g-…` bookmarks still work; the skip link moves focus itself. The link test now clicks every link; on 1.0.0 it reports 17 broken links, and on 1.1.0 it reports 0.
 
-## A3. Defects found while verifying 1.1.0
+## B3. Defects found while verifying 1.1.0
 
 | # | Found by | Defect | Fix |
 |---|---|---|---|
@@ -66,7 +206,7 @@ Root cause: two meanings of # and a test that did not click. Fix: guide links be
 | 13 | Appearance round 1 | On phones, layout ran while the page was hidden and measured nothing | Layout waits until the page is shown; test P1 |
 | 14 | Walkthrough design | "Edit" on a picture block did not say it changes the arrangement | Renamed "Arrange" for picture blocks |
 
-## A4. Verification counts
+## B4. Verification counts
 
 | Check | Baseline (1.0.0) | Round 1 | Round 2 |
 |---|---|---|---|
@@ -83,7 +223,7 @@ Lighthouse: first paint 1.4 to 1.5 s, ready to use 1.7 to 1.9 s. The text reader
 
 The issue tests use two methods for the same facts. Cropping is checked by CSS (object-fit) and by pixels (both colour bands in a screenshot of the cell). "One page" is checked by the block's first and last pixel landing on the same page number. Joining is checked by the block count and by the picture order.
 
-## A5. Performance
+## B5. Performance
 
 Slowest new action: reading text from a screenshot. Measured inside the page over 3 runs, with 3 screenshots per run.
 
@@ -95,7 +235,7 @@ Slowest new action: reading text from a screenshot. Measured inside the page ove
 
 Screen space at 1366 px wide: ribbon 232 px → 80 px; the page area starts at 183 px instead of 335 px (152 px more for the page). With the ribbon hidden, the page starts right below the tab names.
 
-## A6. FMEA additions
+## B6. FMEA additions
 
 Risk priority number (RPN) = severity × occurrence × detection, each 1 to 10.
 
@@ -111,15 +251,15 @@ Risk priority number (RPN) = severity × occurrence × detection, each 1 to 10.
 | Storage | Text-reader cache clashes with another project | Wrong files or wasted space | Shared github.io origin | 4 | 2 | 4 | 32 | Reader's own cache off; service worker cache uses the "wrapnote-" prefix | 8 |
 | Navigation | Address after # read as a page | Error, wrong page | Guide and pages shared # | 4 | 5 | 5 | 100 | Sections under #guide/; old links redirected; click-based link test | 4 |
 
-## A7. DMAIC
+## B7. DMAIC
 
 - **Define.** Four reported issues plus the worked example. Preserve everything else.
 - **Measure.** Baseline on 1.0.0: 110 / 110 earlier tests; 1 of 12 new issue checks passed before the runner stopped; 17 broken links; ribbon 232 px; OCR returned no text.
-- **Analyse.** Section A2.
-- **Improve.** Sections A1 and A3: 4 reported issues and 4 more defects fixed.
+- **Analyse.** Section B2.
+- **Improve.** Sections B1 and A3: 4 reported issues and 4 more defects fixed.
 - **Control.** CI now also runs the issue tests and the new walkthrough. The link test clicks like a person. Golden examples: 5 / 5 (rendering unchanged).
 
-## A8. Stage checkpoints
+## B8. Stage checkpoints
 
 | Stage | Deliverables | Tests run | Unresolved | Exit |
 |---|---|---|---|---|
@@ -136,10 +276,11 @@ Risk priority number (RPN) = severity × occurrence × detection, each 1 to 10.
 
 | Version | Date | Change |
 |---|---|---|
-| 1.1.0 | 17/11/2026 | Part A added for the four reported issues |
-| 1.0.0 | 17/11/2026 | First release report (Part B) |
+| 1.2.0 | 17/11/2026 | Part A added for the 1.2.0 change request; earlier parts renamed B and C |
+| 1.1.0 | 17/11/2026 | Part B added for the four reported issues |
+| 1.0.0 | 17/11/2026 | First release report (Part C) |
 
-# Part B. Version 1.0.0
+# Part C. Version 1.0.0
 
 This report covers how WrapNote was checked: two verification rounds by two methods, the stage checkpoints, a failure mode and effects analysis (FMEA), the DMAIC cycle (define, measure, analyse, improve, control) and the root causes of the defects found.
 
