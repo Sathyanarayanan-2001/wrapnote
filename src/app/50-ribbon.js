@@ -34,7 +34,8 @@ var Ribbon = (function () {
     { id: 'refs', label: 'References', groups: [
       { label: 'Table of contents', items: [['toc', 'Table of contents…'], ['tocUpdate', 'Update table']] },
       { label: 'Captions', items: [['caption', 'Insert caption…'], ['tof', 'Table of figures…']] },
-      { label: 'Footnotes', items: [['footnote', 'Insert footnote…']] }
+      { label: 'Footnotes', items: [['footnote', 'Insert footnote…']] },
+      { label: 'Sources', items: [['srcRef', 'Source reference…'], ['srcPage', 'All sources']] }
     ] },
     { id: 'review', label: 'Review', groups: [
       { label: 'Proofing', items: [['spelling', 'Spelling & grammar'], ['wordCount', 'Word count']] },
@@ -393,6 +394,8 @@ var CMD = {
   // References
   toc: function () { Refs.insertToc(); }, tocUpdate: function () { var r = Refs.updateTocs(true); Ed.changed(); toast(r.count ? 'Updated ' + r.count + ' table' + (r.count === 1 ? '' : 's') + (r.changed ? '.' : ' (already up to date).') : 'There is no table of contents or table of figures yet. Insert one from References first.'); },
   tof: function () { Refs.tableOfFigures(); },
+  srcRef: function () { SourceRefs.dialogAtCursor(); },
+  srcPage: function () { Ed.flush(); location.hash = '#sources'; },
   caption: function () { Refs.caption(); }, footnote: function () { Refs.footnote(); },
   // Review
   spelling: function () { Review.spellingPanel(); }, wordCount: function () { Review.wordCountDialog(); },

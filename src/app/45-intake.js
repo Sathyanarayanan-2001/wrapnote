@@ -302,7 +302,10 @@ var Intake = (function () {
       lbs.forEach(function (l) { lb.appendChild(h('span', { class: 'wn-label' }, l)); });
       block.querySelector('.wn-block-body').innerHTML = sanitizeHtml(box.innerHTML) || '<p><br></p>';
       Ed.changed();
+      refT.flush(); // a reference typed before the note had text is attached now
     }
+    // 1.3.0: optional source reference, folded behind one button so the composer stays tidy.
+    var refT = SourceRefs.toggle(function () { return block; });
     function tog(cls, label) {
       return h('button', { type: 'button', class: 'btn sm', 'aria-pressed': 'false', onmousedown: function (e) { e.preventDefault(); }, onclick: function () {
         if (cls === 'bold') document.execCommand('bold');
@@ -317,8 +320,8 @@ var Intake = (function () {
     promptBox.appendChild(h('div', { class: 'prompt composer' },
       h('p', null, block ? 'Editing this block. Changes show on the page as you type.' : 'Type your text. It appears on the page as you type.'),
       h('div', { class: 'mini-tb' }, tog('bold', 'Bold'), tog('wn-center', 'Center'), tog('highlight', 'Highlight'), tog('wn-callout', 'Callout box')),
-      box, labels,
-      h('div', { class: 'choice-row' }, h('button', { type: 'button', class: 'btn primary', onclick: function () { sync(); promptBox.textContent = ''; Ed.setComposing(null); } }, 'Done'))));
+      box, labels, refT.el,
+      h('div', { class: 'choice-row' }, h('button', { type: 'button', class: 'btn primary', onclick: function () { sync(); refT.flush(); promptBox.textContent = ''; Ed.setComposing(null); } }, 'Done'))));
     Ed.setComposing({ block: block });
     box.focus();
   }
@@ -521,18 +524,30 @@ var Intake = (function () {
     blocks.forEach(function (b, i) {
       var type = b.getAttribute('data-btype') || 'text';
       var label = { text: 'Text', table: 'Table', images: 'Images', shots: 'Screenshots' }[type] || 'Block';
-      var preview = (b.textContent || '').trim().slice(0, 60) || (b.querySelectorAll('img').length + ' picture(s)');
+      var preview = SourceRefs.previewOf(b).slice(0, 60) || (b.querySelectorAll('img').length + ' picture(s)');
+      var ref = Ed.doc.refs[b.getAttribute('data-block')];
       ol.appendChild(h('li', null,
         h('span', { class: 'bl-type' }, label), h('span', { class: 'bl-prev' }, preview),
+        ref ? h('span', { class: 'bl-cite', title: 'Source: ' + WN.refs.citation(ref) }, WN.refs.citation(ref)) : null,
         h('span', { class: 'bl-acts' },
           h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Move block ' + (i + 1) + ' up', disabled: i === 0, onclick: function () { move(b, blocks[i - 1], true); } }, '↑'),
           h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Move block ' + (i + 1) + ' down', disabled: i === blocks.length - 1, onclick: function () { move(b, blocks[i + 1], false); } }, '↓'),
           // Picture blocks say "Arrange" because that is what a newcomer looks for to make a 2×2 grid.
           h('button', { type: 'button', class: 'btn sm', 'aria-label': (type === 'images' || type === 'shots' ? 'Arrange' : 'Edit') + ' block ' + (i + 1), onclick: function () { editBlock(b); } }, type === 'images' || type === 'shots' ? 'Arrange' : 'Edit'),
           h('button', { type: 'button', class: 'btn sm', onclick: function () { formatBlock(b); } }, 'Format'),
+          h('button', { type: 'button', class: 'btn sm', 'aria-label': 'Source reference for block ' + (i + 1), onclick: function () { sourceFor(b); } }, ref ? 'Source ✓' : 'Source'),
           h('button', { type: 'button', class: 'btn sm danger', onclick: function () { Ed.snapshot(); b.remove(); Ed.changed(); drawBlocks(); toast('Block deleted. Use Undo to bring it back.'); } }, 'Delete'))));
     });
     box.appendChild(ol);
+  }
+
+  /** Source reference for any block (text, table or pictures), shown in the same prompt area as the other editors. */
+  function sourceFor(b) {
+    promptBox.textContent = '';
+    var f = SourceRefs.form({ getBlock: function () { return b; }, onChange: function () { renderBlocks(); } });
+    promptBox.appendChild(h('div', { class: 'prompt' }, f.el, h('div', { class: 'choice-row' }, h('button', { type: 'button', class: 'btn primary', onclick: function () { f.flush(); promptBox.textContent = ''; } }, 'Done'))));
+    Views.flash(b);
+    f.focus();
   }
 
   function move(b, other, before) { Ed.snapshot(); if (before) other.before(b); else other.after(b); Ed.changed(); drawBlocks(); Views.flash(b); }

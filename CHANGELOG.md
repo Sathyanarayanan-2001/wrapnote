@@ -2,6 +2,19 @@
 
 All notable changes are listed here. Dates are day first. The format follows Keep a Changelog, and versions follow Semantic Versioning.
 
+## [1.3.0] - 23/11/2026
+
+### Added
+- **Source references on notes.** "+ Add source reference" in the note composer (and **Source** in the block list, or References, **Source reference…** for any paragraph) saves the document name, heading, sub-heading, article or section and page or page range.
+- Document names you used before are suggested as you type, most used first; a name typed in another case or spacing takes the existing spelling. Headings are suggested from the same document.
+- Each note shows a citation tag: Source: Doc › Heading › Sub-heading › Art. 4 › p. 12. It prints and goes into PDF, Word, HTML and Markdown exports.
+- **Sources** page (top bar and phone bar): every referenced note from every document, filtered by document, heading, page (a range finds overlaps) or text. Tap a part of a citation to filter by it; **Open in…** goes back to the note; **Save as CSV** saves the list.
+- Guide section "Source references".
+
+### Changed
+- Document records have an optional `refs` map. Older records open unchanged and get an empty one. Backups, sync, the WrapNote file and Import carry references; a damaged reference is dropped with a message and its document is still imported.
+- On narrow phones the bottom bar shows "Dash" for Dashboard so seven tabs fit.
+
 ## [1.2.0] - 17/11/2026
 
 ### Fixed

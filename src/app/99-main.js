@@ -83,6 +83,8 @@ WN.debug = {
   timings: function () { return Object.assign({}, timings); },
   spellReady: function () { return Spell.ready(); },
   spellSuggest: function (w) { return Spell.suggest(w); },
+  sources: function () { return WN.refs.notes(Store.metas()); },
+  refs: function () { return Ed.doc ? JSON.parse(JSON.stringify(Ed.doc.refs || {})) : null; },
   spellMarked: function () { return Spell.currentBad().map(function (b) { return b.word; }); }
 };
 
@@ -93,9 +95,9 @@ function boot() {
   window.addEventListener('unhandledrejection', function (e) { logError(e.reason, 'unhandledrejection'); });
   Store.open().then(function () {
     if (Store.isMemoryOnly()) toast('This browser blocks storage (private mode?). Work will be lost when the tab closes. Export often.', 'error', 10000);
-    Pages.bind(); Ed.bind(); Spell.bind(); Review.bind(); Views.bind(); IO.bind(); bindCanvasExtras(); bindKeyboardSafety();
+    Pages.bind(); SourceRefs.bindPage(); Ed.bind(); Spell.bind(); Review.bind(); Views.bind(); IO.bind(); bindCanvasExtras(); bindKeyboardSafety();
     Ribbon.build();
-    Store.onChange(function () { var p = Pages.current(); if (p === 'docs') Pages.renderDocs(); if (p === 'dash') Pages.renderDash(); });
+    Store.onChange(function () { var p = Pages.current(); if (p === 'docs') Pages.renderDocs(); if (p === 'dash') Pages.renderDash(); if (p === 'sources') SourceRefs.renderPage(); });
     return Fonts.init().catch(function (e) { logError(e, 'fonts'); });
   }).then(function () {
     Pages.route();

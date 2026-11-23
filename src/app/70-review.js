@@ -10,7 +10,7 @@ var Review = (function () {
   /* ---------- Counts ---------- */
   function counts() {
     var d = Ed.el();
-    var text = plainText(d);
+    var text = plainText(d, '.wn-cite');
     var paras = $$('p,li,h1,h2,h3,h4,h5,h6,blockquote,dd,dt,td,th', d).filter(function (p) { return p.textContent.trim() && !p.querySelector('p,li'); }).length;
     return { words: T.countWords(text), chars: T.countChars(text), charsNoSpace: T.countChars(text, false), paras: paras, pages: Layout.pages() };
   }

@@ -171,3 +171,9 @@
 .doc-content.tpl-office .wn-toc li.lvl-1 { font-weight: 700; }
 .doc-content .wn-toc li a .tnum { display: inline-block; min-width: 2.6em; }
 .doc-content.tpl-office .wn-toc li a { color: #000; }
+
+/* 1.3.0 citation tag under a note: Source: Doc › Heading › Sub-heading › Art. 4 › p. 12. Drawn from the note's
+ * source reference, never stored in the text, and printed and exported with the note. */
+.doc-content .wn-cite { display: block; margin: 3pt 0 6pt; font-size: 8.5pt; line-height: 1.35; color: #475569; font-style: italic; overflow-wrap: anywhere; user-select: none; }
+.doc-content .wn-cite .wn-cite-k { font-style: normal; font-weight: 600; }
+.doc-content .wn-cite .wn-cite-sep { color: #94a3b8; }

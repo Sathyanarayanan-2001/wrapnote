@@ -1,6 +1,6 @@
 # Architecture
 
-Version 1.2.0 · 17/11/2026
+Version 1.3.0 · 23/11/2026
 
 ## Shape of the app
 
@@ -20,11 +20,12 @@ src/
     model.js      document model, generated MoM and study sections, validation
     dashboard.js  dashboard figures
     pictures.js   grid slots, joining a grid, cell shape, OCR text clean-up
+    refs.js       source references: checks, page ranges, citation text, suggestions, filters (1.3.0)
     officeTemplate.js  built-in office template, heading numbers, Word-template audit and clean-up
     zip.js        ZIP writer and reader (CRC-32, stored or deflated parts)      } in word.js,
     ooxml.js      Word (.docx) writer: styles, numbering, fields, Office Math   } loaded on first use
   app/       browser code, loaded in file-name order inside one closure
-    00-util  10-store  20-sync  30-pages  40-editor  45-intake  47-ocr  48-spell
+    00-util  10-store  20-sync  30-pages  40-editor  45-intake  46-refs  47-ocr  48-spell
     50-ribbon  55-insert  60-layout  70-review  80-views  90-io  91-word  99-main
   word/      docx.js: page → Word model (in word.js, reaches the app through WN.app)
   spell/     worker.js: nspell + en-GB dictionary, bundled by esbuild into dist/spell/
@@ -83,8 +84,37 @@ A document record:
 | `html` | The page content (sanitised on every load) |
 | `layout` | Page size, margins, border, watermark, header, footer, page numbers, branding |
 | `comments`, `revisions`, `protect`, `summary` | Review data |
+| `refs` | Source references (1.3.0), keyed by note (block) id. Missing in older records; read as `{}` |
 
 A deletion is a tombstone: `{ id, d: 1, u }`.
+
+## Source references (1.3.0)
+
+A note is a block on the page (`[data-block]`). Its reference lives in the document record, not in the page body:
+
+```
+"refs": {
+  "b8f2k1x9": {
+    "v": 1,                          // shape version, so a later change can be recognised
+    "source": "Grid Code 2023",      // document name (required when any field is set; up to 200 characters)
+    "heading": "Frequency",          // up to 200 characters
+    "sub": "Limits",                 // sub-heading, up to 200 characters
+    "section": "4",                  // article or section as typed, up to 40 characters; "4" shows as "Art. 4"
+    "pages": { "from": 12, "to": 12 }, // or null; a range is { "from": 42, "to": 45 }
+    "t": 1795425800645               // when it was last changed (orders suggestions by recency)
+  }
+}
+```
+
+Why this shape:
+
+1. **Old records keep working.** A record without `refs` is read as `{}` (`WN.refs.upgrade`) when it opens. Nothing else in the record changes, and the page body format is unchanged.
+2. **One copy.** The citation tag on the page is drawn from `refs` on every open, undo and synced change, and removed before the body is saved. The two can never disagree.
+3. **Moves with the note.** Keys are block ids, so moving, formatting or editing a note keeps its reference. A deleted note's reference stays in `refs` so Undo can restore both, but it is left out of lists.
+4. **Pages are numbers.** A range is stored as two integers, so a filter can test overlap without parsing text, and a CSV shows "42-45" as text.
+5. **Checked at every door.** The form, backups, the WrapNote file and sync all pass through `validate` / `cleanMap`. A bad entry is dropped and named in a message; its note and document still import.
+
+Each document's summary (`meta`) carries a flat list of its referenced notes (`refs: [{ b, source, heading, sub, section, pages, t, preview }]`). The Sources page and the suggestions read only these summaries, never whole documents.
 
 The `meta` store keeps a small summary of each document (title, dates, word count, action rows). Lists and the dashboard read only summaries, so pictures are never loaded just to draw a chart.
 
@@ -119,6 +149,8 @@ Printing builds real page boxes of exact size, so the PDF matches the screen pag
 | Look up a document or summary by id | O(1) (IndexedDB key, `Map`) | O(1) |
 | Documents list: filter and sort | O(n log n) | O(n) |
 | Dashboard figures | O(n + a) for n documents, a actions; O(k log k) to sort k categories | O(k) |
+| Sources page: filter and sort n referenced notes | O(n log n); comparison keys made once per stored reference and reused | O(n) |
+| Document-name suggestions | O(n + s log s) for n notes and s distinct names | O(s) |
 | Merge two record sets | O(n + m) hash lookups; canonical JSON is O(s log s) per tied record | O(n + m) |
 | Pagination | O(b) for b top-level blocks, one forced layout | O(b) |
 | CSV parse | O(c) characters; header search O(30 × columns) | O(c) |

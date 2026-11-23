@@ -104,6 +104,7 @@ var IO = (function () {
           preview.textContent = '';
           preview.appendChild(h('p', null, counts.add + ' new, ' + counts.update + ' updated, ' + counts.same + ' unchanged, ' + counts.older + ' older (skipped), ' + counts.deleted + ' deletions.'));
           if (v.errors.length) preview.appendChild(h('p', { class: 'hint err' }, v.errors.length + ' record(s) rejected: ' + v.errors.slice(0, 3).join(' ')));
+          if (v.warnings && v.warnings.length) preview.appendChild(h('p', { class: 'hint err' }, v.warnings.length + ' source reference(s) will be left out; their notes are still imported. ' + v.warnings.slice(0, 3).join(' ')));
           var t = h('table', { class: 'data-table' }, h('thead', null, h('tr', null, h('th', null, 'Document'), h('th', null, 'Status'))));
           var tb = h('tbody'); rows.slice(0, 300).forEach(function (x) { tb.appendChild(h('tr', null, h('td', null, x.r.d ? '(deleted ' + x.r.id + ')' : (x.r.title || 'Untitled')), h('td', null, x.status))); });
           t.appendChild(tb); preview.appendChild(t);
@@ -156,6 +157,7 @@ var IO = (function () {
         if (t === 'A') return '[' + x + '](' + c.getAttribute('href') + ')';
         if (t === 'BR') return '  \n';
         if (t === 'IMG') return '![' + (c.alt || '') + '](embedded-image)';
+        if (c.classList.contains('wn-cite')) return '  \n*' + c.textContent.trim() + '*';
         return x;
       }).join('');
     }
@@ -170,6 +172,9 @@ var IO = (function () {
         else if (t === 'TABLE') { var rows = Array.prototype.map.call(c.rows, function (r) { return '| ' + Array.prototype.map.call(r.cells, function (x) { return x.textContent.trim().replace(/\|/g, '\\|'); }).join(' | ') + ' |'; }); if (rows.length) { rows.splice(1, 0, '|' + ' --- |'.repeat(c.rows[0].cells.length)); out.push(rows.join('\n')); } }
         else if (t === 'DL') Array.prototype.forEach.call(c.children, function (x) { out.push(x.tagName === 'DT' ? '**' + x.textContent.trim() + '**' : ': ' + x.textContent.trim()); });
         else if (c.classList.contains('wn-eq')) out.push('$$' + c.getAttribute('data-tex') + '$$');
+        else if (c.classList.contains('wn-cite')) out.push('*' + c.textContent.trim() + '*');
+        // A note typed in the composer is bare text inside its block (no <p>); without this its text was left out.
+        else if (Array.prototype.some.call(c.childNodes, function (x) { return x.nodeType === 3 && x.data.trim(); }) && !c.querySelector('p,h1,h2,h3,h4,h5,h6,ul,ol,table,blockquote,div,dl,figure')) { var line = inl(c).trim(); if (line) out.push(line); }
         else walk(c);
       });
     })(root);
@@ -207,7 +212,7 @@ var IO = (function () {
         var changes = 0, d = Ed.doc;
         if (polish.checked) {
           var w = document.createTreeWalker(Ed.el(), NodeFilter.SHOW_TEXT), n, nodes = [];
-          while ((n = w.nextNode())) if (!n.parentNode.closest('.wn-gen,.wn-eq,.wn-toc,code,pre,del')) nodes.push(n);
+          while ((n = w.nextNode())) if (!n.parentNode.closest('.wn-gen,.wn-eq,.wn-toc,code,pre,del,.wn-cite')) nodes.push(n); // citation tags are drawn, not text
           // Polish per paragraph so sentence starts are judged on whole sentences.
           var blocks = new Map();
           nodes.forEach(function (t) { var b = t.parentNode.closest('p,li,h1,h2,h3,h4,td,th,blockquote,dd,dt') || t.parentNode; if (!blocks.has(b)) blocks.set(b, []); blocks.get(b).push(t); });

@@ -29,7 +29,7 @@ var Store = (function () {
 
   function loadMetas() {
     metaMap.clear();
-    if (memory) { memory.docs.forEach(function (d) { if (!d.d) metaMap.set(d.id, MODEL.deriveMeta(d, plainOf(d.html))); }); return; }
+    if (memory) { memory.docs.forEach(function (d) { if (!d.d) metaMap.set(d.id, metaOf(d)); }); return; }
     return req(tx(['meta']).objectStore('meta').getAll()).then(function (list) { list.forEach(function (m) { metaMap.set(m.id, m); }); });
   }
 
@@ -48,10 +48,24 @@ var Store = (function () {
   }
 
   /** Save a document and its summary in one transaction. u only moves forward. */
-  function putDoc(doc, plain) {
+  /** Text of each referenced note, read from stored HTML (for documents that are not open in the editor). */
+  function previewsOf(doc) {
+    var out = {}, ids = Object.keys(doc.refs || {});
+    if (!ids.length || !doc.html) return out;
+    var d = new DOMParser().parseFromString('<body>' + doc.html, 'text/html');
+    ids.forEach(function (id) {
+      var b = d.body.querySelector('[data-block="' + id + '"]'); if (!b) return;
+      $$('.wn-cite, .wn-labels', b).forEach(function (x) { x.remove(); });
+      out[id] = (b.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 200) || (b.querySelector('img') ? b.querySelectorAll('img').length + ' picture(s)' : b.querySelector('table') ? 'Table' : '');
+    });
+    return out;
+  }
+  function metaOf(doc, plain, previews) { return MODEL.deriveMeta(doc, plain === undefined ? plainOf(doc.html) : plain, previews || previewsOf(doc)); }
+
+  function putDoc(doc, plain, previews) {
     var prev = metaMap.get(doc.id);
     doc.u = Math.max(Date.now(), (prev && prev.u || 0) + 1, (doc.u || 0) + 1);
-    var meta = MODEL.deriveMeta(doc, plain === undefined ? plainOf(doc.html) : plain);
+    var meta = metaOf(doc, plain, previews);
     metaMap.set(doc.id, meta);
     var p;
     if (memory) { memory.docs.set(doc.id, JSON.parse(JSON.stringify(doc))); p = Promise.resolve(); }
@@ -95,12 +109,12 @@ var Store = (function () {
         var t = tx(['docs', 'meta'], 'readwrite');
         changed.forEach(function (r) {
           t.objectStore('docs').put(r);
-          if (r.d) t.objectStore('meta').delete(r.id); else t.objectStore('meta').put(MODEL.deriveMeta(r, plainOf(r.html)));
+          if (r.d) t.objectStore('meta').delete(r.id); else t.objectStore('meta').put(metaOf(r));
         });
         p = done(t);
       }
       return p.then(function () {
-        changed.forEach(function (r) { if (r.d) metaMap.delete(r.id); else metaMap.set(r.id, MODEL.deriveMeta(r, plainOf(r.html))); });
+        changed.forEach(function (r) { if (r.d) metaMap.delete(r.id); else metaMap.set(r.id, metaOf(r)); });
         var ids = changed.map(function (r) { return r.id; });
         emit(ids, 'remote');
         return ids;

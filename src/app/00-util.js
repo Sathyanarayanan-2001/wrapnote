@@ -170,9 +170,11 @@ function compressImage(dataUrl, maxW) {
 /** Plain text with a line break between blocks. The same function counts words on the page, in storage and
  * after import, so every count agrees. O(n) over text nodes. */
 var BLOCK_RE = /^(P|LI|H[1-6]|TD|TH|DT|DD|BLOCKQUOTE|PRE|DIV|SECTION|TR|FIGCAPTION|NAV)$/;
-function plainText(root) {
+/** skip (optional): a selector whose text is left out, e.g. '.wn-cite' so citation tags do not count as words. */
+function plainText(root, skip) {
   var out = [], w = (root.ownerDocument || document).createTreeWalker(root, NodeFilter.SHOW_TEXT), n, lastBlock = null;
   while ((n = w.nextNode())) {
+    if (skip && n.parentNode.closest && n.parentNode.closest(skip)) continue;
     var b = n.parentNode;
     while (b && b !== root && !BLOCK_RE.test(b.tagName)) b = b.parentNode;
     if (b !== lastBlock) { out.push('\n'); lastBlock = b; }

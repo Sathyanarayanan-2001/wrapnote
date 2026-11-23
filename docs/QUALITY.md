@@ -1,14 +1,135 @@
 # Quality report
 
-Version 1.2.0 · 17/11/2026
+Version 1.3.0 · 23/11/2026
 
-Part A covers version 1.2.0: nine reported issues and the cost removal, how they were reproduced, fixed and checked. Part B is the 1.1.0 report and Part C the 1.0.0 report, both unchanged except for their letters.
+Part A covers version 1.3.0: source references on notes ("Context Reference & Citation"). Parts B, C and D are the 1.2.0, 1.1.0 and 1.0.0 reports, unchanged except for their letters.
 
-# Part A. Version 1.2.0
+# Part A. Version 1.3.0
+
+**Headline: Find any note by its source in seconds.**
+
+## A1. What was asked and what was built
+
+| Requirement | Built | Checks |
+|---|---|---|
+| Optional reference fields: document name with suggestions, heading, sub-heading, article or section, page or range | Form behind "+ Add source reference" in the note composer; **Source** in the block list; References, **Source reference…** for a paragraph | R1–R8, R13–R14 |
+| Stored with the notes, old notes keep working | `doc.refs` keyed by note id; older records read as `{}` | R9–R10, R30; characterisation tests |
+| Carried by export and import | Backup, sync, WrapNote file, Import preview; Markdown, Word, PDF and HTML show the citation; CSV of the Sources list | R23, R25–R29 |
+| Tidy editor | One button opens the form; it closes again | R1, walkthrough task 1 |
+| Citation tag on the note card | On the page, in the block list and on the Sources cards | R1, R3, R15 |
+| Filter by document, heading or page | Sources page: document, heading, page (overlapping ranges) and text search; tap a citation part to filter | R15–R24 |
+
+## A2. Root cause (5 Whys) and design choices
+
+**Problem:** notes from several study documents could not be traced back or gathered by source.
+1. Why could a note not be traced? It had no structured place for its source; people typed sources into the text, in different forms.
+2. Why did that stop gathering? Free text cannot be filtered by document, heading or page.
+3. Why not use labels? Labels are one flat list; a source has five parts and pages need number ranges.
+4. Why not store the citation in the page text? Two copies (text and data) drift apart, and a typed citation is edited by accident.
+5. Root cause: the record had no field for a note's source. Fix: one structured map in the record, with the tag drawn from it.
+
+**5 Whys: a name typed in another case was kept (defect 2 below).** The existing spelling was not taken → the check found no other spelling → the note's own new spelling had already been saved by the as-you-type save → the check counted the note itself → the check ran after the save. Fix: run the check first and leave the note itself out.
+
+**5 Whys: Markdown left out note text (defect 5).** The text was missing → the exporter only read elements → composer notes hold bare text in their block → the 1.0.0 exporter assumed every text sits in a paragraph → no test exported a composer note. Fix: read bare text; test R25b.
+
+## A3. Defects found while verifying 1.3.0
+
+| # | Found by | Defect | Fix |
+|---|---|---|---|
+| 1 | Browser test R13 | In the Source reference dialog, a delayed focus moved the cursor back to Document name while typing the page | The dialog's own first-field focus is used; no delay |
+| 2 | Browser test R7 | "grid  code 2023" kept its spelling instead of the existing "Grid Code 2023" | Check runs before the save and leaves the note itself out |
+| 3 | Appearance round 1 | Page filter hint cut off ("40-4…") | Shorter hint, wider field |
+| 4 | Appearance round 1 | Seven tabs crowd a 320 px phone ("Dashboard" overlapped) | "Dash" on screens up to 420 px; the full name is still announced |
+| 5 | Appearance round 2 | Markdown export left out text typed in the note composer (since 1.0.0) | Bare text in a block is exported (R25b) |
+| 6 | Appearance round 1 | Suggestion list could open below the visible part of the left pane | The list scrolls into view |
+| 7 | Appearance round 1 | "1 of 1 notes" | "1 of 1 note" |
+| 8 | Code review while testing | The final polish could have changed citation text | Citation tags are skipped by the polish |
+| 9 | FMEA review | The CSV wrote pages as "3-4", which spreadsheets turn into a date | Pages written "pp. 3–4" |
+
+Test-side corrections (not app defects): three hand-worked values in the new unit tests were wrong ("connection" does not contain "in"; equal counts sort by recency, as the rule says; "ride through" does match "Ride-through" word by word); the link checker did not know the new page; one walkthrough locator also matched hidden text.
+
+## A4. Verification counts
+
+| Round | Unit (Node) | 1.0.0 suite | 1.1.0 issues | 1.2.0 issues | 1.3.0 references | Links | Walkthroughs |
+|---|---|---|---|---|---|---|---|
+| Characterisation, before any change (1.2.0 code) | 3 / 3 new pinning tests | — | — | — | — | — | — |
+| Round 1, functional | first run of the new file 8 / 10; 3 wrong hand values in all | 110 / 110 | 27 / 27 | 39 / 39 | 21 / 25 (defects 1–2) | 73 clicked, 7 flagged (checker did not know the page) | 19 / 20 (one locator) |
+| Round 1, appearance | screenshots at 1366, 390 and 320 px, light and dark; Word and Markdown exports | | | | | | defects 3, 4, 6, 7 |
+| Round 2, functional | 78 / 78 | 110 / 110 | 27 / 27 | 39 / 39 | 34 / 34 | 83 / 83 | 20 / 20 |
+| Round 2, appearance | same set; the Word file rendered with LibreOffice and checked with the Office schema validator | | | | | | defect 5 |
+| Final regression (after defects 5 and 9) | 78 / 78 | 110 / 110 | 27 / 27 | 39 / 39 | 35 / 35 | 83 / 83 | 20 / 20 |
+
+Two methods for each result: the browser tests read what is on screen, and the same values are read back from storage (`WN.debug`), from the downloaded files (backup JSON, CSV bytes, Markdown, .docx parts) or from a fresh browser profile after import.
+
+Scenario tests:
+- **Round trip:** backup exported, imported into an empty browser profile: documents 2 + 2 added test records, referenced notes match by hand count (R29).
+- **Old data:** a record with no `refs` opens with an empty map (R30); a damaged reference is reported in the preview and dropped, and its document still imports (R28).
+- **Phones:** 320, 360 and 390 px: no sideways scroll; every control on the Sources page and every bottom-bar tab at least 44 px (R32).
+- **Dates, money, weeks, financial years:** unchanged code; the earlier midnight, month-end, 29/02/2024, CW53 and FY-boundary tests all pass in the 1.0.0 suite.
+
+Golden examples (rubric: correct, complete, format followed): 5 / 5 scored 3 of 3. Source references do not change the generated sections they check.
+
+## A5. Performance
+
+Test set: a made-up backup of 40 documents × 50 referenced notes = 2,000 notes, 25 source documents.
+
+| Measure | Before | After | Change |
+|---|---|---|---|
+| Slowest action: one search keystroke on Sources (filter, sort, draw) | 28–41 ms (median 39) | 17–32 ms (median 27) | Comparison keys made once per stored reference |
+| Filter and sort only, no search text | 9.7 ms | 1.2 ms | same |
+| Filter and sort with search text | 14.8 ms | 1.6 ms | same |
+| Show all 2,000 (first 500 drawn) | 25–30 ms | 18–21 ms | same |
+| Document-name suggestions, one keystroke | 2.9 ms | not changed | |
+| Import and summarise all 40 documents | 0.18–0.19 s | not changed | |
+| index.html | 537.5 KB (184.6 KB gzip) | 582.1 KB (197.5 KB gzip) | new feature code |
+
+## A6. FMEA additions
+
+RPN = severity × occurrence × detection, each 1 to 10.
+
+| Area | Failure mode | Effect | Cause | S | O | D | RPN | Control | RPN after |
+|---|---|---|---|---|---|---|---|---|---|
+| Import | Backup or file has a damaged reference | Wrong or failed import | Hand-edited or old file | 6 | 3 | 5 | 90 | `cleanMap` drops it, preview names it, document still imports (R28) | 18 |
+| Import | Old document without references | Crash on open | Missing field | 8 | 6 | 2 | 96 | Read as `{}`; characterisation and R30 | 8 |
+| Evaluation | Page typed as "45-42", "4x" or "0" | Wrong filter results | Typing slip | 5 | 5 | 3 | 75 | Clear message; saved reference unchanged (R4, R20) | 15 |
+| Evaluation | Same document under two spellings | Notes split across two names | Case or spacing | 5 | 6 | 5 | 150 | Existing spelling taken; filters ignore case and spacing (R7, R17) | 30 |
+| Evaluation | Half-typed name saved while choosing a suggestion | Stray document in the list | Save as you type | 3 | 4 | 3 | 36 | Final value replaces it; Remove reference; Undo | 18 |
+| Storage | Citation text and data disagree | Misleading tag | Two copies | 7 | 5 | 4 | 140 | One copy in `refs`; tag never stored (R9) | 14 |
+| Storage | Note deleted, then Undo | Reference lost | Clean-up on delete | 5 | 3 | 4 | 60 | References kept until the note is gone for good; Undo restores both (R12) | 15 |
+| Reporting | Citation missing from an export | Source lost outside the app | Exporter skips the tag | 6 | 4 | 3 | 72 | Markdown, Word, PDF, HTML checked (R25, R25b, R26) | 18 |
+| Reporting | Sources page slow with many notes | Lag while typing | Repeated text normalising | 4 | 3 | 3 | 36 | Keys cached; measured 17–32 ms at 2,000 notes | 12 |
+| Reporting | CSV page range turned into a date by a spreadsheet | Wrong pages | "3-4" read as 03-Apr | 5 | 5 | 4 | 100 | Pages written "pp. 3–4", which no spreadsheet reads as a date (unit test) | 20 |
+
+## A7. DMAIC
+
+- **Define.** Save where each note came from and find notes by document, heading or page. Keep every earlier behaviour.
+- **Measure.** Baseline on 1.2.0: no field for a source; notes could only be found by words in their text. The 3 characterisation tests passed on 1.2.0 before any change.
+- **Analyse.** Section A2.
+- **Improve.** Sections A1 and A3: the feature plus 9 defects fixed.
+- **Control.** CI runs the new browser test and walkthrough with all earlier suites; characterisation tests pin summaries, routes and backups.
+
+## A8. Stage checkpoints
+
+| Stage | Deliverables | Tests run | Unresolved | Exit |
+|---|---|---|---|---|
+| 1. Pin current behaviour | 3 characterisation tests on 1.2.0 | 68 / 68 unit | none | Pass |
+| 2. Core rules | `refs.js`; model changes | 78 / 78 unit after 3 test-value fixes | none | Pass |
+| 3. Storage and editor | `refs` map, tag drawing, undo, summaries | R9–R12; 110, 27, 39 regression | none | Pass |
+| 4. Form and suggestions | Composer button, block list, dialog, combobox | R1–R8, R13–R14 | defects 1–2 (fixed in stage) | Pass |
+| 5. Sources page | Filters, search, citation buttons, CSV, open at note | R15–R24 | none | Pass |
+| 6. Export, import, phones | Backup preview, Markdown, Word; 320–390 px | R25–R32 | defect 5 (fixed in stage 7) | Pass |
+| 7. Appearance and speed | Defects 3–7; key cache | Round 2; timings | none | Pass |
+| 8. Documents and CI | Guide, README, CHANGELOG, ARCHITECTURE, SETUP, this report, workflow | Regression | none | Pass |
+
+## A9. Usability test (scripted, 1.3.0)
+
+Five tasks through visible labels only: start study notes and save a note with its source (two taps to the note composer); cite the same document again from the suggestions; list every note from that document; find the note from page 12; open that note in its document. Result 5 / 5 (times 0.5–1.1 s). It is a script, not a session with a real person.
+
+# Part B. Version 1.2.0
 
 **Headline: Word-true export, office template, live spelling.**
 
-## A1. The reported issues
+## B1. The reported issues
 
 Every issue was first reproduced on 1.1.0 by `tests/e2e/run_issues_v120.py` (baseline: 3 of 16 checks passed; the 3 that passed covered behaviour that was already right). Each check states its input and the result worked out by hand.
 
@@ -25,7 +146,7 @@ Every issue was first reproduced on 1.1.0 by `tests/e2e/run_issues_v120.py` (bas
 | 8 | Word export wrong (no borders, content differs) | Real .docx writer; fonts mapped; template styles | W1–W8 |
 | 9 | Office template and template import | Built-in neutral template; import with audit, clean-up and completion; CLI tool and CI check | O1–O8, T1–T4, X1 |
 
-## A2. Root causes (5 Whys and fishbone)
+## B2. Root causes (5 Whys and fishbone)
 
 **5 Whys: the cursor jumped (issue 1).**
 1. Why did text appear on another line? The caret was moved to the last paragraph.
@@ -46,7 +167,7 @@ Every issue was first reproduced on 1.1.0 by `tests/e2e/run_issues_v120.py` (bas
 
 **Spell check (issue 4).** The app relied on the browser's `spellcheck` attribute; browsers mark words late or not at all in long editable areas.
 
-## A3. Defects found while verifying 1.2.0
+## B3. Defects found while verifying 1.2.0
 
 | # | Found by | Defect | Fix |
 |---|---|---|---|
@@ -66,7 +187,7 @@ Every issue was first reproduced on 1.1.0 by `tests/e2e/run_issues_v120.py` (bas
 
 Test-side corrections (not app defects): one hand-worked ISO week was wrong (02/11/2026 is CW45, not CW44); one hand-worked millimetre value was wrong (2477 twips = 43.69 mm, not 43.70); two test selectors and one escaping error in a test were fixed.
 
-## A4. Verification counts
+## B4. Verification counts
 
 Two methods for each output: browser checks plus file checks.
 
@@ -85,7 +206,7 @@ Golden examples (rubric: correct, complete, format followed): 5 / 5 scored 3 of 
 
 Scenario tests still in the suites and passing: midnight crossing, month end, 29/02/2024, CW53 (31/12/2026), FY boundary (31/03 and 01/04/2027), export and import round trip, phone widths 320, 360 and 390 px (no sideways scrolling on the editor with the office fields, or on Settings).
 
-## A5. Performance
+## B5. Performance
 
 | Measure | Before | After | How |
 |---|---|---|---|
@@ -102,7 +223,7 @@ Scenario tests still in the suites and passing: midnight crossing, month end, 29
 
 The export gain is small (about 7 % overall); the rest of the time is the browser drawing the charts as pictures, which runs in parallel already. It is stated as measured.
 
-## A6. FMEA additions
+## B6. FMEA additions
 
 RPN = severity × occurrence × detection, each 1 to 10.
 
@@ -120,7 +241,7 @@ RPN = severity × occurrence × detection, each 1 to 10.
 | Reporting | Word export offline fails | No export | Engine not cached | 6 | 3 | 3 | 54 | Cached at install; X1 | 12 |
 | Reporting | Template file committed to the public repository | Organisation data published | Developer error | 9 | 2 | 6 | 108 | .gitignore; privacy unit test (hashed words, no .docx allowed) | 18 |
 
-## A7. DMAIC
+## B7. DMAIC
 
 - **Define.** Nine reported issues and the cost removal; keep everything else working; the template must stay brand-neutral.
 - **Measure.** Baseline on 1.1.0: 3 / 16 new checks; Word file not a real .docx; first paint 1.4–1.5 s.
@@ -128,7 +249,7 @@ RPN = severity × occurrence × detection, each 1 to 10.
 - **Improve.** Sections A1 and A3: 10 reported items and 12 more defects fixed.
 - **Control.** CI runs the unit tests, `template:check`, all browser suites and three walkthroughs. A privacy test blocks template files and organisation names. Golden examples 5 / 5.
 
-## A8. Stage checkpoints
+## B8. Stage checkpoints
 
 | Stage | Deliverables | Tests run | Unresolved | Exit |
 |---|---|---|---|---|
@@ -140,13 +261,13 @@ RPN = severity × occurrence × detection, each 1 to 10.
 | 6. Appearance and performance | Defects 6–12 | Renders, screenshots, Lighthouse, timings | none | Pass |
 | 7. Documents and CI | Guide, README, CHANGELOG, ARCHITECTURE, SETUP, TEMPLATE-AUDIT, this report, workflow | Round 2 and regression | none | Pass |
 
-## A9. Usability test (scripted, 1.2.0)
+## B9. Usability test (scripted, 1.2.0)
 
 Five tasks done only through visible labels: start an office document and set the reviewer (2 taps to the document); caption a picture and add a table of figures; fix a misspelt word from its suggestions; colour the pages pale green; export to Word. Result 5 / 5 after defect 10 was fixed. It is a script, not a session with a real person.
 
-# Part B. Version 1.1.0
+# Part C. Version 1.1.0
 
-## B1. The four reported issues
+## C1. The four reported issues
 
 | # | Report | Reproduced by (failed on 1.0.0) |
 |---|---|---|
@@ -160,7 +281,7 @@ The worked example from the request is pinned as tests G1–G7:
 - Input: screenshot A (9:16, like 1080 × 1920), then **Arrange** → 2×2 grid, then screenshot B.
 - Expected and observed: A shows whole (both colour bands visible in a pixel check). B fills slot 2. Slots 3 and 4 stay empty and ready.
 
-## B2. Root causes (analyse)
+## C2. Root causes (analyse)
 
 **Issue 1, 5 Whys.**
 1. Why did OCR fail? The browser had no TextDetector.
@@ -197,7 +318,7 @@ Root cause: no height budget. Fix: a one-row simple ribbon (80 px), a full optio
 
 Root cause: two meanings of # and a test that did not click. Fix: guide links became `#guide/g-…`; old `#g-…` bookmarks still work; the skip link moves focus itself. The link test now clicks every link; on 1.0.0 it reports 17 broken links, and on 1.1.0 it reports 0.
 
-## B3. Defects found while verifying 1.1.0
+## C3. Defects found while verifying 1.1.0
 
 | # | Found by | Defect | Fix |
 |---|---|---|---|
@@ -206,7 +327,7 @@ Root cause: two meanings of # and a test that did not click. Fix: guide links be
 | 13 | Appearance round 1 | On phones, layout ran while the page was hidden and measured nothing | Layout waits until the page is shown; test P1 |
 | 14 | Walkthrough design | "Edit" on a picture block did not say it changes the arrangement | Renamed "Arrange" for picture blocks |
 
-## B4. Verification counts
+## C4. Verification counts
 
 | Check | Baseline (1.0.0) | Round 1 | Round 2 |
 |---|---|---|---|
@@ -223,7 +344,7 @@ Lighthouse: first paint 1.4 to 1.5 s, ready to use 1.7 to 1.9 s. The text reader
 
 The issue tests use two methods for the same facts. Cropping is checked by CSS (object-fit) and by pixels (both colour bands in a screenshot of the cell). "One page" is checked by the block's first and last pixel landing on the same page number. Joining is checked by the block count and by the picture order.
 
-## B5. Performance
+## C5. Performance
 
 Slowest new action: reading text from a screenshot. Measured inside the page over 3 runs, with 3 screenshots per run.
 
@@ -235,7 +356,7 @@ Slowest new action: reading text from a screenshot. Measured inside the page ove
 
 Screen space at 1366 px wide: ribbon 232 px → 80 px; the page area starts at 183 px instead of 335 px (152 px more for the page). With the ribbon hidden, the page starts right below the tab names.
 
-## B6. FMEA additions
+## C6. FMEA additions
 
 Risk priority number (RPN) = severity × occurrence × detection, each 1 to 10.
 
@@ -251,7 +372,7 @@ Risk priority number (RPN) = severity × occurrence × detection, each 1 to 10.
 | Storage | Text-reader cache clashes with another project | Wrong files or wasted space | Shared github.io origin | 4 | 2 | 4 | 32 | Reader's own cache off; service worker cache uses the "wrapnote-" prefix | 8 |
 | Navigation | Address after # read as a page | Error, wrong page | Guide and pages shared # | 4 | 5 | 5 | 100 | Sections under #guide/; old links redirected; click-based link test | 4 |
 
-## B7. DMAIC
+## C7. DMAIC
 
 - **Define.** Four reported issues plus the worked example. Preserve everything else.
 - **Measure.** Baseline on 1.0.0: 110 / 110 earlier tests; 1 of 12 new issue checks passed before the runner stopped; 17 broken links; ribbon 232 px; OCR returned no text.
@@ -259,7 +380,7 @@ Risk priority number (RPN) = severity × occurrence × detection, each 1 to 10.
 - **Improve.** Sections B1 and A3: 4 reported issues and 4 more defects fixed.
 - **Control.** CI now also runs the issue tests and the new walkthrough. The link test clicks like a person. Golden examples: 5 / 5 (rendering unchanged).
 
-## B8. Stage checkpoints
+## C8. Stage checkpoints
 
 | Stage | Deliverables | Tests run | Unresolved | Exit |
 |---|---|---|---|---|
@@ -276,11 +397,12 @@ Risk priority number (RPN) = severity × occurrence × detection, each 1 to 10.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.3.0 | 23/11/2026 | Part A added for source references; earlier parts renamed B, C and D |
 | 1.2.0 | 17/11/2026 | Part A added for the 1.2.0 change request; earlier parts renamed B and C |
 | 1.1.0 | 17/11/2026 | Part B added for the four reported issues |
 | 1.0.0 | 17/11/2026 | First release report (Part C) |
 
-# Part C. Version 1.0.0
+# Part D. Version 1.0.0
 
 This report covers how WrapNote was checked: two verification rounds by two methods, the stage checkpoints, a failure mode and effects analysis (FMEA), the DMAIC cycle (define, measure, analyse, improve, control) and the root causes of the defects found.
 
