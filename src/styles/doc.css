@@ -177,3 +177,13 @@
 .doc-content .wn-cite { display: block; margin: 3pt 0 6pt; font-size: 8.5pt; line-height: 1.35; color: #475569; font-style: italic; overflow-wrap: anywhere; user-select: none; }
 .doc-content .wn-cite .wn-cite-k { font-style: normal; font-weight: 600; }
 .doc-content .wn-cite .wn-cite-sep { color: #94a3b8; }
+/* 1.4.0: a tag placed inside the text is compact and in brackets; any tag can be clicked or dragged. */
+.doc-content .wn-cite[data-place="inline"] { display: inline; margin: 0 0 0 .2em; font-size: .82em; }
+.doc-content .wn-cite[data-place="inline"]::before { content: '['; font-style: normal; }
+.doc-content .wn-cite[data-place="inline"]::after { content: ']'; font-style: normal; }
+.doc-content .wn-cite[draggable="true"] { cursor: grab; border-radius: 3px; }
+.doc-content .wn-cite[draggable="true"]:hover { background: #eef2f7; }
+.doc-content .wn-cite:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+.doc-content .wn-cite.wn-cite-moving { outline: 2px dashed #2563eb; outline-offset: 1px; background: #eff6ff; }
+.wn-moving .doc-content { cursor: crosshair; }
+@media print { .doc-content .wn-cite[draggable="true"]:hover { background: none; } }

@@ -1,14 +1,144 @@
 # Quality report
 
-Version 1.3.0 · 23/11/2026
+Version 1.4.0 · 23/11/2026
 
-Part A covers version 1.3.0: source references on notes ("Context Reference & Citation"). Parts B, C and D are the 1.2.0, 1.1.0 and 1.0.0 reports, unchanged except for their letters.
+Part A covers version 1.4.0: source tags placed and moved where you want them, a frequency-first ribbon with a quick access bar, and a saved, person-made ribbon arrangement. Parts B, C, D and E are the 1.3.0, 1.2.0, 1.1.0 and 1.0.0 reports, unchanged except for their letters.
 
-# Part A. Version 1.3.0
+# Part A. Version 1.4.0
+
+**Headline: Sources sit where you put them.**
+
+## A1. What was asked and what was built
+
+| Request | Built | Checks |
+|---|---|---|
+| 1. "The reference saved is somewhere randomly located near the context, and I could not even move it… It should be placed in a location where I want to have it." | New references made from a selection go right after the selected text. The dialog asks **Where to show it**: after the selection (or at the cursor), at the end of the paragraph, or on its own line. Any tag can be dragged, or moved with Move… and a click (or the cursor and Enter). 1.3.0 tags can be moved too. | S1–S26 |
+| 2. "Best arrangement of the function menus when full ribbon view is selected… style menu and other most frequently used items in the always visible area or first" | Groups ordered by use (Home: Styles, Font, Paragraph, Editing, Clipboard). The full ribbon fits each tab in one band at 1366 px. A quick access bar, always visible, holds the style list, B, I, U, bullets, numbering, Find and Source reference. | Q1–Q5, Q16–Q17; C1 |
+| 3. "Rearrange any of the order… and save the view, such that next time the same order appears" | **Customise…**: reorder tabs, groups and commands (▲ ▼, drag, Alt+Up/Down), hide groups, edit the bar; right-click any command to add or remove it from the bar. Saved on this device; Restore standard. | Q6–Q15; unit tests |
+| Behaviour to preserve: "Don't break any other functionalities or code" | Characterisation tests first; every earlier suite rerun after each change | C1–C3; sections A4 and A8 |
+
+## A2. Root causes (5 Whys)
+
+**Issue 1: the tag went to the end of the paragraph and could not be moved.**
+1. Why at the end? The 1.3.0 tag is drawn by appending it to the note element.
+2. Why appended? A reference is keyed by note (block) id, so the only position known was "this note".
+3. Why could it not be moved? The tag is never stored in the page; it is redrawn from the reference on every open and undo, so any move was undone at once.
+4. Why only the note? 1.3.0 attached sources to whole notes; a reference for a phrase was not part of that design.
+5. Root cause: the record had no place for *where* in the text a source belongs. Fix: a placed tag stores only its position (an empty marker with the reference key and inline/line). The words still come from the one stored reference, so the 1.3.0 rule "one copy" still holds.
+
+**Issues 2 and 3: frequently used commands needed scrolling; the order could not be changed.**
+1. Why scrolling? The simple ribbon is 2,539 px wide on a 1,366 px screen; Styles were near the end of Home.
+2. Why near the end? Groups followed Word's left-to-right order (Clipboard first), not how often WrapNote's users reach for them.
+3. Why did the full ribbon not help? Each group was allowed to grow to 600 px, so most tabs wrapped into a second band (190 px tall) and left half of each band empty.
+4. Why no way to change it? The ribbon was a fixed list with no ids for groups, so an order could not be saved.
+5. Root cause: no stable ids and no always-visible area. Fix: ids for every tab, group and command; a saved arrangement that stores only differences; a quick access bar outside the panel.
+
+**5 Whys: Heading 1 nested a heading inside a paragraph (defect 1).** The page showed `<p><h1>…</h1><tag></p>` → Chrome's block-format command split the paragraph around the tag → the tag is a non-editable island → 1.3.0 tags sat in note blocks that the style command never touched → no test changed the style of a paragraph that holds a tag. Fix: the tags are editable for that one command only; test S25.
+
+## A3. Defects found while verifying 1.4.0
+
+| # | Found by | Defect | Fix |
+|---|---|---|---|
+| 1 | Walkthrough task 3 | Heading 1 on a paragraph holding a placed tag nested the heading inside the paragraph | Tags made editable during that command only; a heading's tag is left out of the navigation pane and the table of contents (S25) |
+| 2 | Speed measurement | Saving a document with 300 placed tags took 23–25 ms (1.3.0: 6–8.5 ms): each reference looked through every tag | One pass builds a key → tag map: 9–11 ms |
+| 3 | Appearance round 1 | Customise: a group's commands opened below all the groups, far from the row clicked | Commands open inside their own group row |
+| 4 | Appearance round 1 | Customise opened scrolled down to the first form control | Opens at the top, focus on the first row |
+| 5 | Appearance round 1 | Phone, 320 px: the style list on the quick access bar shrank to "N" | Minimum width on phones |
+| 6 | Appearance round 1 | Phone: Customise rows wrapped unevenly (some on one line, some on two) | Every row: name on its own line, buttons under it |
+| 7 | Appearance round 2 (export files) | HTML export kept the editor's button role, tab stop, drag handle and "Click for Edit…" hint on each tag | Copies of the page (exports, read mode) show tags as plain text (S19b) |
+
+Design change made while testing: choosing **Restore standard** and Save stored `{"v":1}`; it now stores nothing, so a later version's new standard order reaches the person (Q12).
+
+Test-side corrections (not app defects): a Sources-card check joined the parts without separators (S16); the bar's Bold test ran on a line an earlier step had made a heading (Q5); a locator used "Bold" for the command named "Bold (B)" (Q8); a hand-worked value for a damaged arrangement ignored the stated rule that missing parts go back next to their standard neighbour, so the input was changed to a full saved order (Q14); a check used "untick" on a box the app correctly refuses to untick (Q13); the navigation pane was read before it was drawn (S25); two walkthrough locators ("Tab to arrange"; the reload reopens the same document). Two hand-worked values in the new unit tests were wrong (a missing first group goes first; the fixture has 12 paths, not 11).
+
+## A4. Verification counts
+
+| Round | Unit (Node) | 1.0.0 suite | 1.1.0 issues | 1.2.0 issues | 1.3.0 references | 1.4.0 suite | Links | Walkthroughs |
+|---|---|---|---|---|---|---|---|---|
+| Characterisation, before any change (1.3.0 code) | 3 / 3 new pinning tests (ribbon commands per tab, 1.3.0 tag place, stored fields) | — | — | — | — | — | — | — |
+| New 1.4.0 suite run on the 1.3.0 build (reproduces the issues) | — | — | — | — | — | 0 / 26: S1 shows the tag at the paragraph end; Q16 shows two bands on five tabs | — | — |
+| Round 1, functional | 85 / 85 (7 new, after 2 wrong hand values) | 110 / 110 | 27 / 27 | 39 / 39 | 35 / 35 | first run 35 / 40 (5 test-side), then 44 / 44 | 83 / 83 | 20 / 20; new walkthrough 3 / 5 → defect 1 → 5 / 5 |
+| Round 1, appearance | screenshots at 1366, 390 and 320 px, light and dark: ribbon (simple, full on all six tabs, hidden), bar, tag menu, dialog, Customise | | | | | | | defects 3–6 |
+| Round 2, functional and appearance | Word export rendered with LibreOffice and checked with the Office schema validator (passed); Markdown and HTML files read | | | | | | | defect 7 |
+| Final regression (same build for every suite) | 85 / 85 | 110 / 110 | 27 / 27 | 39 / 39 | 35 / 35 | 48 / 48 | 83 / 83 | 30 / 30 (six walkthroughs) |
+
+A round 2 run was stopped part-way because the app was rebuilt during it (defect 7); it was rerun in full on the final build.
+
+Two methods for each result: the browser tests read what is on screen (text before and after each tag, its place, computed styles, group positions), and the same values are read back from storage (`WN.debug.doc()`, `localStorage`), from downloaded files (Markdown, the .docx parts, HTML, the backup) or from a fresh browser profile after import.
+
+Scenario tests:
+- **Round trip:** backup exported and imported into an empty browser profile; both placed tags are in the same places (S26). The 1.3.0 round trip (R29) still passes.
+- **Old data:** a 1.3.0 note tag still draws at the end of its note (C2) and can be moved, keeping its key (S22–S23); a damaged saved arrangement loads with unknown and repeated parts dropped (Q14) or falls back to the standard (Q15).
+- **Phones:** 320, 360 and 390 px: the bar has its own row, no sideways scroll, every bar and Customise control at least 44 px (Q17); citing and moving a tag by touch alone (Q18).
+- **Dates, money, weeks, financial years:** code not touched; midnight crossings, month ends, 29/02/2024, paisa totals, CW53 and the FY boundary pass in the 1.0.0 suite (110 / 110).
+
+Golden examples (rubric: correct, complete, format followed; 1 point each): 5 / 5 scored 3 of 3. G1 tag after a selected phrase (S1); G2 tag on its own line (S4); G3 a moved 1.3.0 tag (S22); G4 Markdown with an inline tag (S18); G5 Word with an inline tag (S19). The 1.0.0 golden examples for generated sections are unchanged and pass.
+
+## A5. Performance
+
+Medians of 15 runs (Sources page: 5), two sessions each, at 1366 px. Test document: 300 referenced paragraphs.
+
+| Measure | 1.3.0 | 1.4.0 | Note |
+|---|---|---|---|
+| Slowest action: Undo in a document with 300 tags | 23.6–25.1 ms | 29.6–31.2 ms | Every tag is redrawn; placed tags also get their move and menu handles. Under the 100 ms people notice. |
+| Save with 300 tags | 5.8–8.5 ms | 23.3–25.4 ms before the fix, 8.9–11.3 ms after | Defect 2 |
+| Switch ribbon tab | 2.2–2.6 ms | 2.5–2.9 ms | Applies the saved arrangement and redraws the bar |
+| Sources page, 300 notes | 7–9 ms | 6–12 ms | not changed |
+| Customise, one move | — | 4.9–5.2 ms | new |
+| index.html | 582.6 KB (197.7 KB gzip) | 632.9 KB (212.0 KB gzip) | new feature code |
+
+## A6. FMEA additions
+
+RPN = severity × occurrence × detection, each 1 to 10.
+
+| Area | Failure mode | Effect | Cause | S | O | D | RPN | Control | RPN after |
+|---|---|---|---|---|---|---|---|---|---|
+| Import | Pasted or imported page holds a tag from another document | A tag with no reference, or a second copy | Copy and paste between documents | 5 | 5 | 5 | 125 | Unknown and repeated keys removed on opening (S21) | 15 |
+| Import | Saved ribbon arrangement damaged or from a newer version | App fails to start, or commands lost | Hand edit, older or newer version | 8 | 3 | 4 | 96 | `normalize` drops unknown parts, adds missing ones, keeps one group per tab; message shown (Q14–Q15, unit tests) | 16 |
+| Evaluation | Tag dropped into a heading, generated text or another tag | Broken table of contents or summary | Drag or click in the wrong place | 5 | 4 | 3 | 60 | Same place rule for dialog, Move and drag; tag stays; message says why (S12, S15) | 12 |
+| Evaluation | Block style changed on a paragraph with a tag | Heading nested in a paragraph | Browser command splits around the tag | 6 | 5 | 4 | 120 | Tag editable during that command (S25) | 18 |
+| Evaluation | Last group of a tab hidden | Commands unreachable | Unticking every Show box | 6 | 3 | 2 | 36 | Refused with a message (Q13); repaired on loading | 6 |
+| Storage | Tag words stored in the page and the reference | Two copies disagree | Saving the drawn tag | 7 | 4 | 3 | 84 | Only an empty marker is stored (S2) | 14 |
+| Storage | Move or remove cannot be undone | Lost source | No snapshot | 6 | 3 | 3 | 54 | Snapshot before each move and remove (S8, S20) | 12 |
+| Storage | Standard arrangement stored as a copy | A later version's improved order never reaches the person | Storing full lists | 3 | 6 | 7 | 126 | Only differences stored; the standard stores nothing (Q10, Q12) | 18 |
+| Reporting | Inline tag in exports split from its sentence or shown as a button | Wrong or odd output | Exporters treat every tag as a line | 5 | 5 | 3 | 75 | Markdown, Word, HTML checked (S18–S19b) | 15 |
+| Reporting | Sources text wrong for a placed tag | Note found under the wrong words | Preview read from the note, not the paragraph | 5 | 4 | 3 | 60 | Preview from the paragraph around the tag (S16, S23) | 15 |
+
+## A7. DMAIC
+
+- **Define.** Put each source tag where the person wants it and let them move it; make the most used commands reachable without scrolling; let the person arrange the ribbon and keep that arrangement. Break nothing.
+- **Measure.** Baseline on 1.3.0: the tag always at the paragraph end (S1 on 1.3.0); full ribbon 190 px tall in two bands on five tabs (Q16 on 1.3.0); simple ribbon 2,539 px wide on a 1,366 px screen; no saved arrangement. The 3 characterisation tests passed on 1.3.0 before any change.
+- **Analyse.** Section A2.
+- **Improve.** Section A1, and the 7 defects in A3.
+- **Control.** CI runs the characterisation tests, the 1.4.0 suite and walkthrough with all earlier suites; the ribbon command list is pinned in `tests/e2e/fixtures/ribbon-inventory-130.json`.
+
+## A8. Stage checkpoints
+
+| Stage | Deliverables | Tests run | Unresolved | Exit |
+|---|---|---|---|---|
+| 1. Pin current behaviour | 3 characterisation tests and the recorded command list, on 1.3.0 | 3 / 3 | none | Pass |
+| 2. Arrangement rules | `ribbonLayout.js` (check, repair, apply, move, store differences) | 85 / 85 unit after 2 test-value fixes | none | Pass |
+| 3. Ribbon | Group ids and order, bar, right-click, Customise, one-band full ribbon | C1; 110, 27, 39, 35 regression | none | Pass |
+| 4. Placed tags | Dialog place choice, markers, drag, Move…, menu, exports, Sources | S1–S24; 1.3.0 suite 35 / 35 | none | Pass |
+| 5. Round 1 | Reproduced on 1.3.0; new suite; walkthrough; speed; screenshots | Section A4 | defects 1–6 (fixed in stage) | Pass |
+| 6. Round 2 | Export files; final regression | Section A4 | defect 7 (fixed in stage) | Pass |
+| 7. Documents and CI | Guide, Settings history, README, CHANGELOG, ARCHITECTURE, SETUP, this report, workflow | Links 83 / 83 | none | Pass |
+
+## A9. Usability test (scripted, 1.4.0)
+
+Five tasks through visible labels only: cite a selected phrase (the tag follows the phrase); move the tag to the end of the sentence; make the line a heading from the quick access bar while the Insert tab is open; put Page break on the bar; make Clipboard the first group and find it so after reopening. Result 5 / 5 (times 0.4–2.1 s). The first run stopped at task 3, which found defect 1. It is a script, not a session with a real person.
+
+## A10. Known limits (1.4.0)
+
+- Dragging a tag needs a mouse. On a touch screen, tap the tag, choose Move… and tap the new place (Q18).
+- The ribbon arrangement is saved in this browser only; backups and sync carry documents, not settings.
+- A tag inside a heading (after the paragraph became a heading) shows in the heading; Word's own table of contents, when updated inside Word, includes its words.
+
+# Part B. Version 1.3.0
 
 **Headline: Find any note by its source in seconds.**
 
-## A1. What was asked and what was built
+## B1. What was asked and what was built
 
 | Requirement | Built | Checks |
 |---|---|---|
@@ -19,7 +149,7 @@ Part A covers version 1.3.0: source references on notes ("Context Reference & Ci
 | Citation tag on the note card | On the page, in the block list and on the Sources cards | R1, R3, R15 |
 | Filter by document, heading or page | Sources page: document, heading, page (overlapping ranges) and text search; tap a citation part to filter | R15–R24 |
 
-## A2. Root cause (5 Whys) and design choices
+## B2. Root cause (5 Whys) and design choices
 
 **Problem:** notes from several study documents could not be traced back or gathered by source.
 1. Why could a note not be traced? It had no structured place for its source; people typed sources into the text, in different forms.
@@ -32,7 +162,7 @@ Part A covers version 1.3.0: source references on notes ("Context Reference & Ci
 
 **5 Whys: Markdown left out note text (defect 5).** The text was missing → the exporter only read elements → composer notes hold bare text in their block → the 1.0.0 exporter assumed every text sits in a paragraph → no test exported a composer note. Fix: read bare text; test R25b.
 
-## A3. Defects found while verifying 1.3.0
+## B3. Defects found while verifying 1.3.0
 
 | # | Found by | Defect | Fix |
 |---|---|---|---|
@@ -48,7 +178,7 @@ Part A covers version 1.3.0: source references on notes ("Context Reference & Ci
 
 Test-side corrections (not app defects): three hand-worked values in the new unit tests were wrong ("connection" does not contain "in"; equal counts sort by recency, as the rule says; "ride through" does match "Ride-through" word by word); the link checker did not know the new page; one walkthrough locator also matched hidden text.
 
-## A4. Verification counts
+## B4. Verification counts
 
 | Round | Unit (Node) | 1.0.0 suite | 1.1.0 issues | 1.2.0 issues | 1.3.0 references | Links | Walkthroughs |
 |---|---|---|---|---|---|---|---|
@@ -69,7 +199,7 @@ Scenario tests:
 
 Golden examples (rubric: correct, complete, format followed): 5 / 5 scored 3 of 3. Source references do not change the generated sections they check.
 
-## A5. Performance
+## B5. Performance
 
 Test set: a made-up backup of 40 documents × 50 referenced notes = 2,000 notes, 25 source documents.
 
@@ -83,7 +213,7 @@ Test set: a made-up backup of 40 documents × 50 referenced notes = 2,000 notes,
 | Import and summarise all 40 documents | 0.18–0.19 s | not changed | |
 | index.html | 537.5 KB (184.6 KB gzip) | 582.1 KB (197.5 KB gzip) | new feature code |
 
-## A6. FMEA additions
+## B6. FMEA additions
 
 RPN = severity × occurrence × detection, each 1 to 10.
 
@@ -100,15 +230,15 @@ RPN = severity × occurrence × detection, each 1 to 10.
 | Reporting | Sources page slow with many notes | Lag while typing | Repeated text normalising | 4 | 3 | 3 | 36 | Keys cached; measured 17–32 ms at 2,000 notes | 12 |
 | Reporting | CSV page range turned into a date by a spreadsheet | Wrong pages | "3-4" read as 03-Apr | 5 | 5 | 4 | 100 | Pages written "pp. 3–4", which no spreadsheet reads as a date (unit test) | 20 |
 
-## A7. DMAIC
+## B7. DMAIC
 
 - **Define.** Save where each note came from and find notes by document, heading or page. Keep every earlier behaviour.
 - **Measure.** Baseline on 1.2.0: no field for a source; notes could only be found by words in their text. The 3 characterisation tests passed on 1.2.0 before any change.
-- **Analyse.** Section A2.
-- **Improve.** Sections A1 and A3: the feature plus 9 defects fixed.
+- **Analyse.** Section B2.
+- **Improve.** Sections B1 and B3: the feature plus 9 defects fixed.
 - **Control.** CI runs the new browser test and walkthrough with all earlier suites; characterisation tests pin summaries, routes and backups.
 
-## A8. Stage checkpoints
+## B8. Stage checkpoints
 
 | Stage | Deliverables | Tests run | Unresolved | Exit |
 |---|---|---|---|---|
@@ -121,15 +251,15 @@ RPN = severity × occurrence × detection, each 1 to 10.
 | 7. Appearance and speed | Defects 3–7; key cache | Round 2; timings | none | Pass |
 | 8. Documents and CI | Guide, README, CHANGELOG, ARCHITECTURE, SETUP, this report, workflow | Regression | none | Pass |
 
-## A9. Usability test (scripted, 1.3.0)
+## B9. Usability test (scripted, 1.3.0)
 
 Five tasks through visible labels only: start study notes and save a note with its source (two taps to the note composer); cite the same document again from the suggestions; list every note from that document; find the note from page 12; open that note in its document. Result 5 / 5 (times 0.5–1.1 s). It is a script, not a session with a real person.
 
-# Part B. Version 1.2.0
+# Part C. Version 1.2.0
 
 **Headline: Word-true export, office template, live spelling.**
 
-## B1. The reported issues
+## C1. The reported issues
 
 Every issue was first reproduced on 1.1.0 by `tests/e2e/run_issues_v120.py` (baseline: 3 of 16 checks passed; the 3 that passed covered behaviour that was already right). Each check states its input and the result worked out by hand.
 
@@ -146,7 +276,7 @@ Every issue was first reproduced on 1.1.0 by `tests/e2e/run_issues_v120.py` (bas
 | 8 | Word export wrong (no borders, content differs) | Real .docx writer; fonts mapped; template styles | W1–W8 |
 | 9 | Office template and template import | Built-in neutral template; import with audit, clean-up and completion; CLI tool and CI check | O1–O8, T1–T4, X1 |
 
-## B2. Root causes (5 Whys and fishbone)
+## C2. Root causes (5 Whys and fishbone)
 
 **5 Whys: the cursor jumped (issue 1).**
 1. Why did text appear on another line? The caret was moved to the last paragraph.
@@ -167,7 +297,7 @@ Every issue was first reproduced on 1.1.0 by `tests/e2e/run_issues_v120.py` (bas
 
 **Spell check (issue 4).** The app relied on the browser's `spellcheck` attribute; browsers mark words late or not at all in long editable areas.
 
-## B3. Defects found while verifying 1.2.0
+## C3. Defects found while verifying 1.2.0
 
 | # | Found by | Defect | Fix |
 |---|---|---|---|
@@ -187,7 +317,7 @@ Every issue was first reproduced on 1.1.0 by `tests/e2e/run_issues_v120.py` (bas
 
 Test-side corrections (not app defects): one hand-worked ISO week was wrong (02/11/2026 is CW45, not CW44); one hand-worked millimetre value was wrong (2477 twips = 43.69 mm, not 43.70); two test selectors and one escaping error in a test were fixed.
 
-## B4. Verification counts
+## C4. Verification counts
 
 Two methods for each output: browser checks plus file checks.
 
@@ -206,7 +336,7 @@ Golden examples (rubric: correct, complete, format followed): 5 / 5 scored 3 of 
 
 Scenario tests still in the suites and passing: midnight crossing, month end, 29/02/2024, CW53 (31/12/2026), FY boundary (31/03 and 01/04/2027), export and import round trip, phone widths 320, 360 and 390 px (no sideways scrolling on the editor with the office fields, or on Settings).
 
-## B5. Performance
+## C5. Performance
 
 | Measure | Before | After | How |
 |---|---|---|---|
@@ -223,7 +353,7 @@ Scenario tests still in the suites and passing: midnight crossing, month end, 29
 
 The export gain is small (about 7 % overall); the rest of the time is the browser drawing the charts as pictures, which runs in parallel already. It is stated as measured.
 
-## B6. FMEA additions
+## C6. FMEA additions
 
 RPN = severity × occurrence × detection, each 1 to 10.
 
@@ -241,7 +371,7 @@ RPN = severity × occurrence × detection, each 1 to 10.
 | Reporting | Word export offline fails | No export | Engine not cached | 6 | 3 | 3 | 54 | Cached at install; X1 | 12 |
 | Reporting | Template file committed to the public repository | Organisation data published | Developer error | 9 | 2 | 6 | 108 | .gitignore; privacy unit test (hashed words, no .docx allowed) | 18 |
 
-## B7. DMAIC
+## C7. DMAIC
 
 - **Define.** Nine reported issues and the cost removal; keep everything else working; the template must stay brand-neutral.
 - **Measure.** Baseline on 1.1.0: 3 / 16 new checks; Word file not a real .docx; first paint 1.4–1.5 s.
@@ -249,7 +379,7 @@ RPN = severity × occurrence × detection, each 1 to 10.
 - **Improve.** Sections A1 and A3: 10 reported items and 12 more defects fixed.
 - **Control.** CI runs the unit tests, `template:check`, all browser suites and three walkthroughs. A privacy test blocks template files and organisation names. Golden examples 5 / 5.
 
-## B8. Stage checkpoints
+## C8. Stage checkpoints
 
 | Stage | Deliverables | Tests run | Unresolved | Exit |
 |---|---|---|---|---|
@@ -261,13 +391,13 @@ RPN = severity × occurrence × detection, each 1 to 10.
 | 6. Appearance and performance | Defects 6–12 | Renders, screenshots, Lighthouse, timings | none | Pass |
 | 7. Documents and CI | Guide, README, CHANGELOG, ARCHITECTURE, SETUP, TEMPLATE-AUDIT, this report, workflow | Round 2 and regression | none | Pass |
 
-## B9. Usability test (scripted, 1.2.0)
+## C9. Usability test (scripted, 1.2.0)
 
 Five tasks done only through visible labels: start an office document and set the reviewer (2 taps to the document); caption a picture and add a table of figures; fix a misspelt word from its suggestions; colour the pages pale green; export to Word. Result 5 / 5 after defect 10 was fixed. It is a script, not a session with a real person.
 
-# Part C. Version 1.1.0
+# Part D. Version 1.1.0
 
-## C1. The four reported issues
+## D1. The four reported issues
 
 | # | Report | Reproduced by (failed on 1.0.0) |
 |---|---|---|
@@ -281,7 +411,7 @@ The worked example from the request is pinned as tests G1–G7:
 - Input: screenshot A (9:16, like 1080 × 1920), then **Arrange** → 2×2 grid, then screenshot B.
 - Expected and observed: A shows whole (both colour bands visible in a pixel check). B fills slot 2. Slots 3 and 4 stay empty and ready.
 
-## C2. Root causes (analyse)
+## D2. Root causes (analyse)
 
 **Issue 1, 5 Whys.**
 1. Why did OCR fail? The browser had no TextDetector.
@@ -318,7 +448,7 @@ Root cause: no height budget. Fix: a one-row simple ribbon (80 px), a full optio
 
 Root cause: two meanings of # and a test that did not click. Fix: guide links became `#guide/g-…`; old `#g-…` bookmarks still work; the skip link moves focus itself. The link test now clicks every link; on 1.0.0 it reports 17 broken links, and on 1.1.0 it reports 0.
 
-## C3. Defects found while verifying 1.1.0
+## D3. Defects found while verifying 1.1.0
 
 | # | Found by | Defect | Fix |
 |---|---|---|---|
@@ -327,7 +457,7 @@ Root cause: two meanings of # and a test that did not click. Fix: guide links be
 | 13 | Appearance round 1 | On phones, layout ran while the page was hidden and measured nothing | Layout waits until the page is shown; test P1 |
 | 14 | Walkthrough design | "Edit" on a picture block did not say it changes the arrangement | Renamed "Arrange" for picture blocks |
 
-## C4. Verification counts
+## D4. Verification counts
 
 | Check | Baseline (1.0.0) | Round 1 | Round 2 |
 |---|---|---|---|
@@ -344,7 +474,7 @@ Lighthouse: first paint 1.4 to 1.5 s, ready to use 1.7 to 1.9 s. The text reader
 
 The issue tests use two methods for the same facts. Cropping is checked by CSS (object-fit) and by pixels (both colour bands in a screenshot of the cell). "One page" is checked by the block's first and last pixel landing on the same page number. Joining is checked by the block count and by the picture order.
 
-## C5. Performance
+## D5. Performance
 
 Slowest new action: reading text from a screenshot. Measured inside the page over 3 runs, with 3 screenshots per run.
 
@@ -356,7 +486,7 @@ Slowest new action: reading text from a screenshot. Measured inside the page ove
 
 Screen space at 1366 px wide: ribbon 232 px → 80 px; the page area starts at 183 px instead of 335 px (152 px more for the page). With the ribbon hidden, the page starts right below the tab names.
 
-## C6. FMEA additions
+## D6. FMEA additions
 
 Risk priority number (RPN) = severity × occurrence × detection, each 1 to 10.
 
@@ -372,7 +502,7 @@ Risk priority number (RPN) = severity × occurrence × detection, each 1 to 10.
 | Storage | Text-reader cache clashes with another project | Wrong files or wasted space | Shared github.io origin | 4 | 2 | 4 | 32 | Reader's own cache off; service worker cache uses the "wrapnote-" prefix | 8 |
 | Navigation | Address after # read as a page | Error, wrong page | Guide and pages shared # | 4 | 5 | 5 | 100 | Sections under #guide/; old links redirected; click-based link test | 4 |
 
-## C7. DMAIC
+## D7. DMAIC
 
 - **Define.** Four reported issues plus the worked example. Preserve everything else.
 - **Measure.** Baseline on 1.0.0: 110 / 110 earlier tests; 1 of 12 new issue checks passed before the runner stopped; 17 broken links; ribbon 232 px; OCR returned no text.
@@ -380,7 +510,7 @@ Risk priority number (RPN) = severity × occurrence × detection, each 1 to 10.
 - **Improve.** Sections B1 and A3: 4 reported issues and 4 more defects fixed.
 - **Control.** CI now also runs the issue tests and the new walkthrough. The link test clicks like a person. Golden examples: 5 / 5 (rendering unchanged).
 
-## C8. Stage checkpoints
+## D8. Stage checkpoints
 
 | Stage | Deliverables | Tests run | Unresolved | Exit |
 |---|---|---|---|---|
@@ -397,12 +527,13 @@ Risk priority number (RPN) = severity × occurrence × detection, each 1 to 10.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.4.0 | 23/11/2026 | Part A added for placed source tags and the ribbon arrangement; earlier parts renamed B, C, D and E |
 | 1.3.0 | 23/11/2026 | Part A added for source references; earlier parts renamed B, C and D |
 | 1.2.0 | 17/11/2026 | Part A added for the 1.2.0 change request; earlier parts renamed B and C |
 | 1.1.0 | 17/11/2026 | Part B added for the four reported issues |
 | 1.0.0 | 17/11/2026 | First release report (Part C) |
 
-# Part D. Version 1.0.0
+# Part E. Version 1.0.0
 
 This report covers how WrapNote was checked: two verification rounds by two methods, the stage checkpoints, a failure mode and effects analysis (FMEA), the DMAIC cycle (define, measure, analyse, improve, control) and the root causes of the defects found.
 

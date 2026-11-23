@@ -82,8 +82,15 @@ var Ed = (function () {
     $$('.wn-hit', c).forEach(function (n) { n.replaceWith.apply(n, Array.prototype.slice.call(n.childNodes)); });
     // Empty grid slots are screen-only helpers, rebuilt on every layout pass.
     $$('.wn-slot', c).forEach(function (n) { n.remove(); });
-    // Citation tags are drawn from doc.refs; the body never stores a copy, so the two cannot disagree.
-    $$('.wn-cite', c).forEach(function (n) { n.remove(); });
+    // Citation words are drawn from doc.refs; the body never stores a copy, so the two cannot disagree.
+    // A placed tag (1.4.0) keeps only its place: an empty span with its key and inline/line.
+    $$('.wn-cite', c).forEach(function (n) {
+      if (!n.hasAttribute('data-place')) { n.remove(); return; }
+      var k = n.getAttribute('data-ref'), p = n.getAttribute('data-place');
+      Array.prototype.slice.call(n.attributes).forEach(function (a) { n.removeAttribute(a.name); });
+      n.textContent = '';
+      n.className = 'wn-cite'; n.setAttribute('contenteditable', 'false'); n.setAttribute('data-ref', k); n.setAttribute('data-place', p === 'line' ? 'line' : 'inline');
+    });
     $$('.wn-selected, .wn-similar, .wn-flash', c).forEach(function (n) { n.classList.remove('wn-selected', 'wn-similar', 'wn-flash'); if (!n.className) n.removeAttribute('class'); });
     return c.innerHTML;
   }

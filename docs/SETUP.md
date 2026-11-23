@@ -1,6 +1,6 @@
 # Setup
 
-Version 1.3.0 · 17/11/2026
+Version 1.4.0 · 23/11/2026
 
 ## What you need
 
@@ -30,6 +30,9 @@ Version 1.3.0 · 17/11/2026
 10. Run `python tests/e2e/usability_v120.py`.
 11. Run `python tests/e2e/run_refs_v130.py`.
 12. Run `python tests/e2e/usability_v130.py`.
+13. Run `python tests/e2e/characterise_v140.py` (pins the 1.3.0 ribbon command list in `tests/e2e/fixtures/`).
+14. Run `python tests/e2e/run_v140.py`.
+15. Run `python tests/e2e/usability_v140.py`.
 
 Each script prints PASS or FAIL per check and exits with code 0 only when everything passes.
 

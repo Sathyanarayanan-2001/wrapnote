@@ -307,7 +307,7 @@ var Refs = (function () {
       if (nav.getAttribute('data-mode') === 'manual' && !force) return;
       var source = nav.getAttribute('data-source') || 'headings', lv = +(nav.getAttribute('data-levels') || 3), only = nav.getAttribute('data-label') || '';
       var items = [];
-      if (source === 'headings') $$('h1,h2,h3', Ed.el()).forEach(function (hd) { var l = +hd.tagName[1]; if (l <= lv && !hd.closest('.wn-toc, .wn-cover, .wn-off-cover') && hd.textContent.trim()) items.push({ l: l, t: hd.textContent.trim(), n: hd.getAttribute('data-num') || '', el: hd }); });
+      if (source === 'headings') $$('h1,h2,h3', Ed.el()).forEach(function (hd) { var l = +hd.tagName[1]; if (l <= lv && !hd.closest('.wn-toc, .wn-cover, .wn-off-cover') && ownText(hd).trim()) items.push({ l: l, t: ownText(hd).trim(), n: hd.getAttribute('data-num') || '', el: hd }); });
       if (source === 'labels') $$('[data-labels]', Ed.el()).forEach(function (b) { var lb = b.getAttribute('data-labels'); if (lb) items.push({ l: 1, t: lb + ': ' + (b.querySelector('.wn-block-body') || b).textContent.trim().slice(0, 60), el: b }); });
       if (source === 'figures') $$('.wn-caption', Ed.el()).forEach(function (c) { if (!only || c.getAttribute('data-kind') === only) items.push({ l: 1, t: c.textContent.trim(), el: c }); });
       var empty = source === 'figures' ? 'No ' + (only ? only.toLowerCase() + ' ' : '') + 'captions yet. Use References, Insert caption.' : 'No entries yet. Add headings (Home, Styles) or captions.';

@@ -163,7 +163,8 @@ main:focus { outline: none; }
 .rb-arrow { position: absolute; bottom: 4px; width: 34px; height: 34px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 20px; line-height: 1; cursor: pointer; z-index: 2; box-shadow: var(--shadow); }
 .rb-arrow.left { left: 4px; } .rb-arrow.right { right: 4px; }
 .ribbon.locked .rb-panel { opacity: .75; }
-.rb-tabs { display: flex; gap: 2px; padding: 0 10px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: thin; }
+.rb-head { display: flex; align-items: stretch; border-bottom: 1px solid var(--border); }
+.rb-tabs { display: flex; gap: 2px; padding: 0 10px; overflow-x: auto; scrollbar-width: thin; flex: 1 1 auto; min-width: 0; }
 .rb-tab { border: 0; background: transparent; padding: 8px 14px; font: inherit; font-weight: 600; color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; min-height: 38px; }
 .rb-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 .rb-panel { display: flex; flex-wrap: wrap; gap: 0; padding: 6px 8px 0; }
@@ -499,3 +500,54 @@ body.painting #docEl { cursor: copy; }
   .bottombar .bb-long { display: none; }
   .bottombar .bb-short { display: inline; }
 }
+
+/* ---------- 1.4.0 Quick access bar and Customise ribbon ---------- */
+/* Always visible, before the tabs: the style list and the most used commands never need scrolling. */
+.rb-qat { display: flex; align-items: center; gap: 2px; padding: 3px 8px; border-right: 1px solid var(--border); flex: none; overflow-x: auto; scrollbar-width: none; }
+.rb-qat::-webkit-scrollbar { display: none; }
+.rb-qat[hidden] { display: none; }
+.rb-qat .rb-sel { max-width: 130px; }
+.rb-qat .rb-btn { padding: 3px 7px; }
+/* Full ribbon (1.4.0): each group wraps to at most three short rows, so a whole tab fits in one band on a
+ * 1366 px screen (it used two bands and left half of each empty). Groups share any spare width. */
+.ribbon.full .rb-panel { flex-wrap: wrap; align-items: stretch; }
+.ribbon.full .rb-group { flex: 1 1 auto; justify-content: space-between; }
+.ribbon.full .rb-items { max-width: 250px; align-content: flex-start; }
+.ribbon.full .rb-group[data-group="home/font"] .rb-items, .ribbon.full .rb-group[data-group="home/paragraph"] .rb-items, .ribbon.full .rb-group[data-group="review/tracking"] .rb-items, .ribbon.full .rb-group[data-group="layout/setup"] .rb-items { max-width: 340px; }
+.ribbon.full .rb-group[data-group="layout/paragraph"] .rb-items { max-width: 420px; }
+.ribbon.full .rb-group[data-group="layout/background"] .rb-items { max-width: 130px; }
+.ribbon.full .rb-group[data-group$="/styles"] .rb-items { max-width: 130px; }
+.ribbon.full .rb-group[data-group="home/editing"] .rb-items { max-width: 190px; }
+.ribbon.full .rb-group[data-group="home/clipboard"] .rb-items { max-width: 160px; }
+.ribbon.full .rb-sel { max-width: 150px; }
+.cz-body { display: grid; gap: 14px; }
+.cz-sec h3 { margin: 0 0 4px; font-size: var(--fs-md, 16px); }
+.cz-sub { flex: 1 1 100%; margin: 4px 0 2px 22px; cursor: default; }
+.cz-row { flex-wrap: wrap; }
+.cz-sub h4 { margin: 4px 0; font-size: var(--fs-sm); }
+.cz-list { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 4px; }
+.cz-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; min-height: 40px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2); cursor: grab; }
+.cz-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.cz-row.dragging { opacity: .5; }
+.cz-row.drop { border-color: var(--accent); box-shadow: 0 -3px 0 var(--accent) inset; }
+.cz-grip { color: var(--muted); letter-spacing: -2px; }
+.cz-label { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.cz-extra { display: inline-flex; align-items: center; gap: 6px; }
+.cz-acts { display: inline-flex; gap: 2px; flex: none; }
+.cz-mv { min-width: 34px; }
+.cz-mv[disabled] { opacity: .35; }
+@media (max-width: 760px) {
+  .rb-head { flex-wrap: wrap; }
+  .rb-qat { flex: 1 1 100%; border-right: 0; border-bottom: 1px solid var(--border); }
+  .rb-qat .rb-btn, .rb-qat .rb-sel { min-height: var(--tap); min-width: var(--tap); }
+  .cz-mv { min-width: var(--tap); min-height: var(--tap); }
+  .cz-row { flex-wrap: wrap; }
+  /* Every row the same on a phone: the name on its own line, the buttons under it on the right. */
+  .cz-label { flex: 1 1 calc(100% - 40px); }
+  .cz-extra, .cz-acts { margin-left: auto; }
+  .rb-qat .rb-sel { min-width: 104px; }
+}
+.ref-place { border: 0; padding: 0; margin: 6px 0; display: grid; gap: 4px; }
+.ref-place legend { font-weight: 600; font-size: var(--fs-sm); padding: 0; margin-bottom: 2px; }
+.ref-place .chk { min-height: 32px; display: flex; align-items: center; gap: 8px; }
+@media (max-width: 760px) { .ref-place .chk, .cite-menu button { min-height: var(--tap); } }
