@@ -13,8 +13,8 @@ var Pages = (function () {
       if (holder && holder.id === 'page-guide') { history.replaceState(null, '', '#guide/' + raw); r = { page: 'guide', section: raw }; }
     }
     if (r.error) toast(r.error + (r.page === 'guide' ? '' : ' Showing ' + (r.page === 'docs' ? 'your documents' : 'the home page') + ' instead.'), 'error');
-    if (r.page === 'edit' && Ed.doc && r.id === Ed.doc.id) { show('edit'); return; }
-    if (r.page === 'edit' && r.id) { Ed.open(r.id).then(function (ok) { if (ok) show('edit'); else { toast('That document was not found. It may have been deleted.', 'error'); go('#docs'); } }); return; }
+    if (r.page === 'edit' && Ed.doc && r.id === Ed.doc.id) { show('edit'); if (r.block) SourceRefs.focusBlock(r.block); return; }
+    if (r.page === 'edit' && r.id) { Ed.open(r.id).then(function (ok) { if (ok) { show('edit'); if (r.block) SourceRefs.focusBlock(r.block); } else { toast('That document was not found. It may have been deleted.', 'error'); go('#docs'); } }); return; }
     show(r.page);
     if (r.section) scrollToSection(r.section);
   }
@@ -36,6 +36,7 @@ var Pages = (function () {
     if (page === 'dash') renderDash();
     if (page === 'home') renderHome();
     if (page === 'settings') renderSettings();
+    if (page === 'sources') SourceRefs.renderPage();
     if (page === 'edit') { $('#edEmpty').hidden = !!Ed.doc; $('#editor').hidden = !Ed.doc; if (Ed.doc) Ed.relayout(); else renderEdEmpty(); }
     var heading = $('#page-' + page + ' h1');
     document.title = (page === 'edit' && Ed.doc ? (Ed.doc.title || 'Untitled') + ' · ' : heading ? heading.textContent + ' · ' : '') + 'WrapNote';

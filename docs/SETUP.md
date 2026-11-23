@@ -1,6 +1,6 @@
 # Setup
 
-Version 1.2.0 · 17/11/2026
+Version 1.3.0 · 17/11/2026
 
 ## What you need
 
@@ -28,6 +28,8 @@ Version 1.2.0 · 17/11/2026
 8. Run `python tests/e2e/usability_v110.py`.
 9. Run `python tests/e2e/run_issues_v120.py` (writes sample .docx files to `tests/e2e/reports/`, which is not committed).
 10. Run `python tests/e2e/usability_v120.py`.
+11. Run `python tests/e2e/run_refs_v130.py`.
+12. Run `python tests/e2e/usability_v130.py`.
 
 Each script prints PASS or FAIL per check and exits with code 0 only when everything passes.
 

@@ -15,7 +15,7 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(join(out, 'icons'), { recursive: true });
 
 // Core modules must load in dependency order (model needs dates, money, safe, text).
-const CORE = ['safe', 'money', 'dates', 'text', 'csv', 'merge', 'diff', 'latex', 'model', 'dashboard', 'pictures', 'officeTemplate'];
+const CORE = ['safe', 'money', 'dates', 'text', 'csv', 'merge', 'diff', 'latex', 'refs', 'model', 'dashboard', 'pictures', 'officeTemplate'];
 const core = CORE.map((n) => src(`src/core/${n}.js`)).join('\n');
 const appFiles = readdirSync(join(root, 'src/app')).filter((f) => f.endsWith('.js')).sort();
 const app = appFiles.map((f) => `/* ---- ${f} ---- */\n` + src(`src/app/${f}`)).join('\n');

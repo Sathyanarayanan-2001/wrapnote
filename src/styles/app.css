@@ -386,7 +386,7 @@ body.painting #docEl { cursor: copy; }
   .seg-btn, .rb-btn, .rb-tab, .rb-sel, .rb-num, .linkish { min-height: var(--tap); }
   input[type=text], input[type=search], input[type=number], input[type=url], input[type=password], select, textarea { min-height: var(--tap); font-size: 16px; }
   .chk { min-height: var(--tap); }
-  .bottombar { display: grid; grid-template-columns: repeat(6, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--surface); border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); }
+  .bottombar { display: grid; grid-template-columns: repeat(7, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--surface); border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); }
   .bottombar a { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 56px; font-size: 11px; color: var(--muted); text-decoration: none; font-weight: 600; min-width: 0; }
   .bottombar a span { font-size: 18px; line-height: 1.1; }
   .bottombar a.active { color: var(--accent); }
@@ -464,3 +464,38 @@ body.painting #docEl { cursor: copy; }
 .office-fields summary { font-weight: 600; cursor: pointer; margin-bottom: 6px; }
 .tpl-report ul { margin: 6px 0 0 18px; padding: 0; }
 .tpl-report li { margin-bottom: 4px; }
+
+/* ---------- 1.3.0 Source references ---------- */
+.src-filters { grid-template-columns: 2fr 2fr 1.4fr 2fr auto; }
+.bb-short { display: none; }
+.bottombar a .bb-long, .bottombar a .bb-short { font-size: inherit; line-height: inherit; }
+.ref-toggle { margin: 6px 0; }
+.ref-form { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px 10px; margin: 6px 0; min-width: 0; }
+.ref-form legend { font-weight: 600; padding: 0 4px; }
+.ref-shows { font-size: var(--fs-sm); color: var(--muted); margin: 4px 0; overflow-wrap: anywhere; }
+.ref-msg { font-size: var(--fs-sm); margin: 4px 0; }
+.ref-msg.err, #srcErr { color: var(--danger, #b91c1c); }
+#srcErr:empty, .ref-msg:empty { display: none; }
+.combo { position: relative; }
+.combo-list { position: absolute; z-index: 60; left: 0; right: 0; top: 100%; margin: 2px 0 0; padding: 4px; list-style: none; background: var(--surface); color: var(--text); border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: var(--shadow); max-height: 260px; overflow-y: auto; }
+.combo-list li { padding: 8px 10px; min-height: 36px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; }
+.combo-list li:hover, .combo-list li.on { background: var(--accent-soft, rgba(37,99,235,.12)); }
+.bl-cite { grid-column: 1 / -1; font-size: var(--fs-xs, 12px); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.src-results { display: grid; gap: 10px; }
+.src-card { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; background: var(--surface-2); min-width: 0; }
+.src-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; font-size: var(--fs-sm); }
+.src-crumbs .crumb { background: none; border: 0; padding: 2px 4px; min-height: 32px; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; border-radius: 4px; text-align: left; overflow-wrap: anywhere; }
+.src-crumbs .crumb:hover, .src-crumbs .crumb:focus-visible { text-decoration: underline; }
+.src-crumbs .crumb.static { color: var(--text); cursor: default; display: inline-flex; align-items: center; }
+.src-crumbs .wn-cite-sep { color: var(--muted); }
+.src-text { margin: 6px 0; overflow-wrap: anywhere; }
+.src-open { font-size: var(--fs-sm); display: inline-flex; align-items: center; min-height: 32px; }
+@media (max-width: 760px) {
+  .src-crumbs .crumb, .src-open, .combo-list li { min-height: var(--tap); }
+  .src-filters { grid-template-columns: 1fr; }
+}
+/* Seven tabs fit a 320 px phone only with short words: "Dashboard" becomes "Dash" (its full name is still announced). */
+@media (max-width: 420px) {
+  .bottombar .bb-long { display: none; }
+  .bottombar .bb-short { display: inline; }
+}

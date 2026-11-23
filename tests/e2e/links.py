@@ -9,7 +9,7 @@ from playwright.sync_api import sync_playwright
 
 ap = argparse.ArgumentParser(); ap.add_argument('--base', default='http://localhost:8765/'); ap.add_argument('--chrome', default=os.environ.get('CHROME_PATH', ''))
 a = ap.parse_args()
-PAGE_HEAD = {'home': 'Never start from a blank page again', 'docs': 'Documents', 'edit': 'Editor', 'dash': 'Dashboard', 'guide': 'Guide', 'settings': 'Settings'}
+PAGE_HEAD = {'home': 'Never start from a blank page again', 'docs': 'Documents', 'edit': 'Editor', 'dash': 'Dashboard', 'guide': 'Guide', 'settings': 'Settings', 'sources': 'Sources'}
 ICONS = '⌂▤✎▥?⚙'
 bad, checked = [], 0
 with sync_playwright() as p:

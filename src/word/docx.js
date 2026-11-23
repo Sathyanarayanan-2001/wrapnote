@@ -133,6 +133,8 @@ var Docx = (function () {
       var cid = c.classList.contains('wn-comment') && c.getAttribute('data-cid');
       if (cid && self.comments.has(cid)) out.push({ t: 'commentStart', id: self.comments.get(cid) });
       if (c.classList.contains('wn-pagebreak')) { out.push({ t: 'pagebreak' }); return; }
+      // A citation tag shows on its own line under the note text (1.3.0).
+      if (c.classList.contains('wn-cite') && out.length) out.push({ t: 'br' });
       out = out.concat(self.runs(c, para, x));
       if (cid && self.comments.has(cid)) out.push({ t: 'commentEnd', id: self.comments.get(cid) });
     });

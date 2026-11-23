@@ -7,9 +7,10 @@
   var dates = isNode ? require('./dates.js') : g.WN.dates;
   var safe = isNode ? require('./safe.js') : g.WN.safe;
   var text = isNode ? require('./text.js') : g.WN.text;
+  var refs = isNode ? require('./refs.js') : g.WN.refs;
   var esc = safe.escapeHtml;
 
-  var VERSION = '1.2.0';
+  var VERSION = '1.3.0';
   var MODES = { mom: 'Minutes and reports', book: 'Book and study notes', blank: 'Blank document' };
   var WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -47,7 +48,7 @@
     if (m === 'book') f.book.date = todayIso;
     return {
       id: id || uid('d'), u: nowMs, created: nowMs, mode: m, title: '', category: m === 'mom' ? 'Meetings' : m === 'book' ? 'Study' : 'General',
-      status: 'draft', fields: f, html: '', layout: defaultLayout(), comments: [], revisions: [], protect: { mode: 'none' }, summary: []
+      status: 'draft', fields: f, html: '', layout: defaultLayout(), comments: [], revisions: [], protect: { mode: 'none' }, summary: [], refs: {}
     };
   }
 
@@ -173,13 +174,15 @@
   }
 
   /** Small record kept separately so lists and the dashboard never load full documents. */
-  function deriveMeta(doc, plain) {
+  /** previews (optional, 1.3.0): { blockId: note text } so the summary can carry each referenced note. */
+  function deriveMeta(doc, plain, previews) {
     var acts = doc.mode === 'mom' ? (doc.fields.mom.actions || []) : [];
     return {
       id: doc.id, u: doc.u, title: doc.title || (doc.mode === 'book' ? 'Untitled study notes' : doc.mode === 'mom' ? 'Untitled minutes' : 'Untitled document'),
       mode: doc.mode, category: doc.category || 'General', status: doc.status, date: docDate(doc), created: doc.created,
       words: plain === undefined ? 0 : text.countWords(plain),
-      actions: acts.filter(function (a) { return String(a.task || '').trim(); }).map(function (a) { return { task: a.task, owner: a.owner || '', due: a.due || '', done: !!a.done }; })
+      actions: acts.filter(function (a) { return String(a.task || '').trim(); }).map(function (a) { return { task: a.task, owner: a.owner || '', due: a.due || '', done: !!a.done }; }),
+      refs: previews ? refs.index(doc.refs, previews) : []
     };
   }
 
@@ -205,7 +208,7 @@
   }
 
   var ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
-  var ROUTES = new Set(['home', 'docs', 'edit', 'dash', 'guide', 'settings']);
+  var ROUTES = new Set(['home', 'docs', 'edit', 'dash', 'guide', 'settings', 'sources']);
 
   /** Validate the address-bar hash, e.g. #edit/d123. Unknown values fall back to home with a reason. */
   function parseRoute(hash) {
@@ -216,6 +219,11 @@
     if (!ROUTES.has(page)) return { page: 'home', error: 'The page "' + page.slice(0, 30) + '" does not exist.' };
     if (page === 'edit') {
       if (parts[1] && !ID_RE.test(parts[1])) return { page: 'docs', error: 'That document link is not valid.' };
+      // 1.3.0: #edit/<document>/<note> opens a document at one note (links from the Sources page).
+      if (parts[2] !== undefined) {
+        if (!refs.BLOCK_ID_RE.test(parts[2])) return { page: 'edit', id: parts[1] || null, error: 'That note link is not valid. Opening the document at the top.' };
+        return { page: 'edit', id: parts[1] || null, block: parts[2] };
+      }
       return { page: 'edit', id: parts[1] || null };
     }
     // Guide sections live under the guide page (#guide/g-ribbon) so they never collide with page names.
@@ -232,7 +240,7 @@
     if (!obj || typeof obj !== 'object') return { ok: false, errors: ['The file is not a WrapNote backup (not JSON).'] };
     if (obj.app !== 'wrapnote') return { ok: false, errors: ['The file is not a WrapNote backup (missing app name).'] };
     if (!Array.isArray(obj.records)) return { ok: false, errors: ['The backup has no records list.'] };
-    var good = [];
+    var good = [], warnings = [];
     obj.records.forEach(function (r, i) {
       var where = 'Record ' + (i + 1) + ': ';
       if (!r || typeof r !== 'object') { errors.push(where + 'not an object.'); return; }
@@ -243,9 +251,13 @@
       if (typeof r.html !== 'string' || r.html.length > 25e6) { errors.push(where + 'document body is missing or over 25 MB.'); return; }
       if (typeof r.title !== 'string' || r.title.length > 300) { errors.push(where + 'title is missing or over 300 characters.'); return; }
       if (!r.fields || !r.fields.mom || !r.fields.book) { errors.push(where + 'fields are missing.'); return; }
+      // Source references (1.3.0): a bad entry is dropped and reported; the document itself is still imported.
+      var c = refs.cleanMap(r.refs);
+      c.skipped.forEach(function (s) { warnings.push(where + s); });
+      if (r.refs !== undefined || c.skipped.length) r = Object.assign({}, r, { refs: c.refs });
       good.push(r);
     });
-    return { ok: errors.length === 0, errors: errors, records: good };
+    return { ok: errors.length === 0, errors: errors, warnings: warnings, records: good };
   }
 
   var api = {

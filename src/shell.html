@@ -23,6 +23,7 @@
   <nav class="tabs" aria-label="Main">
     <a href="#home" data-nav="home">Home</a>
     <a href="#docs" data-nav="docs">Documents</a>
+    <a href="#sources" data-nav="sources">Sources</a>
     <a href="#edit" data-nav="edit">Editor</a>
     <a href="#dash" data-nav="dash">Dashboard</a>
     <a href="#guide" data-nav="guide">Guide</a>
@@ -56,6 +57,7 @@
       <ul class="link-list">
         <li><a href="#docs">Documents</a> <span>search, filter, duplicate and delete</span></li>
         <li><a href="#edit">Editor</a> <span>guided fields, blocks and the Word-style ribbon</span></li>
+        <li><a href="#sources">Sources</a> <span>every note you saved from a source, by document, heading or page</span></li>
         <li><a href="#dash">Dashboard</a> <span>documents, words and action items at a glance</span></li>
         <li><a href="#guide">Guide</a> <span>how every feature works, with a worked example</span></li>
         <li><a href="#settings">Settings</a> <span>theme, sync folder, backup and error log</span></li>
@@ -173,6 +175,25 @@
 </section>
 
 <!-- DASHBOARD -->
+<!-- SOURCES (1.3.0) -->
+<section id="page-sources" class="page" hidden>
+  <div class="page-head">
+    <h1>Sources</h1>
+    <div class="head-actions"><button type="button" class="btn" id="srcCsv">Save as CSV</button></div>
+  </div>
+  <p class="hint">Every note with a source reference, from all your documents. Pick a document, a heading or a page to see what you saved from it.</p>
+  <div class="filters src-filters">
+    <select id="srcDoc" aria-label="Document"></select>
+    <select id="srcHead" aria-label="Heading"></select>
+    <input id="srcPage" type="text" inputmode="numeric" maxlength="20" placeholder="Page: 42 or 40-45" aria-label="Page or page range" aria-describedby="srcErr">
+    <input id="srcQ" type="search" maxlength="200" placeholder="Search notes and citations" aria-label="Search notes and citations">
+    <button type="button" class="btn ghost" id="srcClear">Clear filters</button>
+  </div>
+  <p id="srcErr" class="hint err" role="alert"></p>
+  <p id="srcCount" class="hint" aria-live="polite"></p>
+  <div id="srcResults" class="src-results"></div>
+</section>
+
 <section id="page-dash" class="page" hidden>
   <div class="page-head"><h1>Dashboard</h1><button type="button" class="btn" id="csvAll">Export all action items (.csv)</button></div>
   <div id="kpis" class="kpis"></div>
@@ -184,7 +205,7 @@
 <section id="page-guide" class="page guide" hidden>
   <h1>Guide</h1>
   <nav class="toc-guide" aria-label="Guide contents">
-    <a href="#guide/g-start">Getting started</a><a href="#guide/g-left">Left pane</a><a href="#guide/g-ribbon">Ribbon</a><a href="#guide/g-office">Office documents</a><a href="#guide/g-final">Finishing</a><a href="#guide/g-keys">Shortcuts</a><a href="#guide/g-sync">Sync</a><a href="#guide/g-io">Import and export</a><a href="#guide/g-example">Worked example</a><a href="#guide/g-privacy">Privacy</a><a href="#guide/g-limits">Limits</a><a href="#guide/g-help">Troubleshooting</a>
+    <a href="#guide/g-start">Getting started</a><a href="#guide/g-left">Left pane</a><a href="#guide/g-ribbon">Ribbon</a><a href="#guide/g-office">Office documents</a><a href="#guide/g-sources">Source references</a><a href="#guide/g-final">Finishing</a><a href="#guide/g-keys">Shortcuts</a><a href="#guide/g-sync">Sync</a><a href="#guide/g-io">Import and export</a><a href="#guide/g-example">Worked example</a><a href="#guide/g-privacy">Privacy</a><a href="#guide/g-limits">Limits</a><a href="#guide/g-help">Troubleshooting</a>
   </nav>
   <section id="g-start" class="card"><h2>Getting started</h2>
     <ol>
@@ -242,6 +263,19 @@
     </ol>
     <p>To switch an existing document, use Design &amp; layout, <strong>Template</strong>. Switching to Office removes heading numbers you typed by hand, so they do not show twice.</p>
     <p><strong>Your own Word template:</strong> Settings, Word template, <strong>Import Word template…</strong>. WrapNote checks it on this device, removes pictures (such as logos), comments, tracked changes, labels, custom data and the names in its properties, repairs settings that break the Word file format, adds any style WrapNote needs that the template lacks, and lists what it did. Exports of office documents then use the template's styles, numbering, header and footers. Nothing is uploaded.</p>
+  </section>
+  <section id="g-sources" class="card"><h2>Source references</h2>
+    <p>When you study several documents, each note can say where it came from: <strong>document name</strong>, <strong>heading</strong>, <strong>sub-heading</strong>, <strong>article or section</strong> and <strong>page</strong>. The note then shows a citation tag such as "Source: Grid Code 2023 › Frequency › Limits › Art. 4 › p. 12".</p>
+    <ol>
+      <li>In the left pane, choose <strong>Text &amp; labels</strong> and type the note.</li>
+      <li>Choose <strong>+ Add source reference</strong>.</li>
+      <li>Type the document name. Names you used before are suggested; pick one with a tap or with the arrow keys and Enter.</li>
+      <li>Fill in what you know. Page takes one page (42) or a range (42-45). A bare number in Article / section shows as "Art. 4"; type "Clause 5.3" or "§ 2" to show it as written.</li>
+      <li>Choose <strong>Done</strong>. The reference saves as you type; Undo takes it back.</li>
+    </ol>
+    <p>For a table, picture block or ordinary paragraph, use <strong>Source</strong> in the block list, or put the cursor in the paragraph and choose References, <strong>Source reference…</strong>.</p>
+    <p>The <strong>Sources</strong> page lists every note with a reference, from all your documents. Choose a document or heading, type a page (a range finds every note that overlaps it), or search the text. Tap any part of a citation to filter by it, and <strong>Open in…</strong> to go back to the note. <strong>Save as CSV</strong> saves the list you see; pages are written "p. 12" or "pp. 42–45" so a spreadsheet does not turn them into dates.</p>
+    <p>References are saved inside the document, so backups, sync, the WrapNote file and Import carry them. Exports to PDF, Word, HTML and Markdown show the citation under each note.</p>
   </section>
   <section id="g-final" class="card"><h2>Finishing a document</h2>
     <ol>
@@ -363,7 +397,8 @@
       <p id="appVersion"></p>
       <h3>Revision history</h3>
       <table class="data-table"><thead><tr><th scope="col">Version</th><th scope="col">Date</th><th scope="col">Change</th></tr></thead>
-        <tbody><tr><td>1.2.0</td><td class="num">17/11/2026</td><td>Cursor stays where you type, also in tables; Update table works; captions sit centred on their picture, plus a table of figures; spell check as you type; page colour palette; ruler in split view; current style shown; no cost on action items; real Word (.docx) export; Office document template and Word template import with clean-up.</td></tr>
+        <tbody><tr><td>1.3.0</td><td class="num">23/11/2026</td><td>Source references on notes: document name with suggestions, heading, sub-heading, article or section, page or range; a citation tag on each note; a Sources page to find notes by document, heading, page or text; included in backups, exports and CSV.</td></tr>
+        <tr><td>1.2.0</td><td class="num">17/11/2026</td><td>Cursor stays where you type, also in tables; Update table works; captions sit centred on their picture, plus a table of figures; spell check as you type; page colour palette; ruler in split view; current style shown; no cost on action items; real Word (.docx) export; Office document template and Word template import with clean-up.</td></tr>
         <tr><td>1.1.0</td><td class="num">17/11/2026</td><td>Text extraction works in every modern browser; screenshots fill a 2×2 grid one after another without cropping; simple, full or hidden ribbon; guide contents links fixed.</td></tr>
         <tr><td>1.0.0</td><td class="num">16/11/2026</td><td>First release: guided intake, six-tab ribbon, paged layout, track changes, sync, dashboard, offline install.</td></tr></tbody></table>
     </section>
@@ -374,8 +409,9 @@
 <nav class="bottombar" aria-label="Main">
   <a href="#home" data-nav="home"><span aria-hidden="true">⌂</span>Home</a>
   <a href="#docs" data-nav="docs"><span aria-hidden="true">▤</span>Docs</a>
+  <a href="#sources" data-nav="sources"><span aria-hidden="true">❝</span>Sources</a>
   <a href="#edit" data-nav="edit"><span aria-hidden="true">✎</span>Editor</a>
-  <a href="#dash" data-nav="dash"><span aria-hidden="true">▥</span>Dashboard</a>
+  <a href="#dash" data-nav="dash" aria-label="Dashboard"><span aria-hidden="true">▥</span><span class="bb-long">Dashboard</span><span class="bb-short" aria-hidden="true">Dash</span></a>
   <a href="#guide" data-nav="guide"><span aria-hidden="true">?</span>Guide</a>
   <a href="#settings" data-nav="settings"><span aria-hidden="true">⚙</span>Settings</a>
 </nav>

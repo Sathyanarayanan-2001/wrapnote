@@ -24,9 +24,13 @@ var Ed = (function () {
       // 1.2.0: documents made before templates existed use the personal look.
       doc.template = doc.template === 'office' ? 'office' : 'personal';
       if (doc.template === 'office') doc.office = WN.officeTemplate.clean(doc.office);
+      // 1.3.0: documents saved before source references get an empty map; a damaged entry is dropped and reported.
+      var refMsgs = WN.refs.upgrade(doc);
+      if (refMsgs.length) toast(refMsgs.length + ' source reference(s) could not be read and were left out. ' + refMsgs[0], 'error', 9000);
       el().classList.toggle('tpl-office', doc.template === 'office');
       el().innerHTML = sanitizeHtml(doc.html || '');
       ensureGen();
+      SourceRefs.renderAll();
       hist = []; histIdx = -1; histMax = settings.get('memorySaver', true) ? 25 : 60;
       composing = null; selObj = null;
       $('#edTitle').value = doc.title || '';
@@ -78,6 +82,8 @@ var Ed = (function () {
     $$('.wn-hit', c).forEach(function (n) { n.replaceWith.apply(n, Array.prototype.slice.call(n.childNodes)); });
     // Empty grid slots are screen-only helpers, rebuilt on every layout pass.
     $$('.wn-slot', c).forEach(function (n) { n.remove(); });
+    // Citation tags are drawn from doc.refs; the body never stores a copy, so the two cannot disagree.
+    $$('.wn-cite', c).forEach(function (n) { n.remove(); });
     $$('.wn-selected, .wn-similar, .wn-flash', c).forEach(function (n) { n.classList.remove('wn-selected', 'wn-similar', 'wn-flash'); if (!n.className) n.removeAttribute('class'); });
     return c.innerHTML;
   }
@@ -87,8 +93,8 @@ var Ed = (function () {
     if (!doc) return Promise.resolve();
     doc.html = serialize();
     Sync.localSaving(1);
-    var plain = plainText(el());
-    return Store.putDoc(doc, plain).then(function () {
+    var plain = plainText(el(), '.wn-cite');
+    return Store.putDoc(doc, plain, SourceRefs.previews()).then(function () {
       $('#saveState').textContent = 'Saved ' + D.formatDateTime(new Date()).slice(11);
       Views.broadcast();
     }).catch(function (e) {
@@ -127,16 +133,17 @@ var Ed = (function () {
   }
   function snapshot() {
     if (!doc) return;
-    var snap = { html: serialize(), fields: JSON.stringify(doc.fields), title: doc.title, caret: caretOffset() };
+    var snap = { html: serialize(), fields: JSON.stringify(doc.fields), title: doc.title, refs: JSON.stringify(doc.refs || {}), caret: caretOffset() };
     var top = hist[histIdx];
-    if (top && top.html === snap.html && top.fields === snap.fields && top.title === snap.title) return;
+    if (top && top.html === snap.html && top.fields === snap.fields && top.title === snap.title && top.refs === snap.refs) return;
     hist = hist.slice(0, histIdx + 1); hist.push(snap);
     if (hist.length > histMax) hist.shift();
     histIdx = hist.length - 1;
   }
   var snapshotSoon = debounce(snapshot, 700);
   function restore(s) {
-    el().innerHTML = s.html; doc.fields = JSON.parse(s.fields); doc.title = s.title;
+    el().innerHTML = s.html; doc.fields = JSON.parse(s.fields); doc.title = s.title; doc.refs = JSON.parse(s.refs || '{}');
+    SourceRefs.renderAll();
     $('#edTitle').value = doc.title || '';
     Intake.render(); setCaret(s.caret); saveSoon(); relayout(); Intake.renderBlocks();
   }
