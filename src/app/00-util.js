@@ -194,7 +194,32 @@ var SAN_DROP = new Set(['script', 'style', 'iframe', 'object', 'embed', 'link', 
 var SAN_ATTR = new Set(('class style href src alt title colspan rowspan contenteditable display mathvariant stretchy largeop accent width height linebreak xmlns ' +
   'viewbox x y x1 y1 x2 y2 cx cy r rx ry d points fill stroke stroke-width stroke-dasharray stroke-linecap stroke-linejoin transform text-anchor font-size font-weight ' +
   'marker-end refx refy markerwidth markerheight orient preserveaspectratio opacity fill-opacity dominant-baseline role aria-label aria-hidden id spellcheck').split(' '));
-var SAN_DATA = /^data-(field|gen|block|btype|labels|cid|author|time|tex|chart|fn|text|kind|levels|source|mode|wn-id|label|shape|wrap|display|summary|layout)$/;
+var SAN_DATA = /^data-(field|gen|block|btype|labels|cid|author|time|tex|chart|fn|text|kind|levels|source|mode|wn-id|label|shape|wrap|display|summary|layout|ref|place)$/;
+
+/** Copies of the page (exports, read mode) show source tags as plain text: no button role, tab stop, drag handle or editing hint. */
+function quietCites(root) {
+  $$('.wn-cite', root).forEach(function (x) {
+    ['role', 'tabindex', 'draggable', 'aria-label', 'data-ref'].forEach(function (a) { x.removeAttribute(a); });
+    if (x.title) x.title = x.title.replace(/\. Click for .*$/, '');
+  });
+  return root;
+}
+
+/** An element's own words, without source tags (a heading that carries a tag still lists by its words). */
+function ownText(el) {
+  if (!el.querySelector('.wn-cite')) return el.textContent;
+  var c = el.cloneNode(true); $$('.wn-cite', c).forEach(function (x) { x.remove(); }); return c.textContent;
+}
+
+/** The paragraph a source tag belongs to: its list item, paragraph, quote, cell or note; else the top-level element. */
+function citeHolder(node, root) {
+  var e = node && (node.nodeType === 1 ? node : node.parentNode);
+  if (!e || !root.contains(e)) return null;
+  var p = e.closest('li, p, blockquote, td, th, pre, [data-block]');
+  if (p && root.contains(p) && p !== root) return p;
+  while (e && e.parentNode && e.parentNode !== root) e = e.parentNode;
+  return e && e.parentNode === root ? e : null;
+}
 
 function sanitizeHtml(html) {
   var doc = new DOMParser().parseFromString('<!doctype html><body>' + String(html || ''), 'text/html');

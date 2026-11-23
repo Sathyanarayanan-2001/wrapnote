@@ -53,8 +53,11 @@ var Store = (function () {
     var out = {}, ids = Object.keys(doc.refs || {});
     if (!ids.length || !doc.html) return out;
     var d = new DOMParser().parseFromString('<body>' + doc.html, 'text/html');
+    // 1.4.0: a placed tag belongs to the paragraph it sits in; a 1.3.0 tag to its note.
+    var am = SourceRefs.anchorMap(d.body);
     ids.forEach(function (id) {
-      var b = d.body.querySelector('[data-block="' + id + '"]'); if (!b) return;
+      var a = am[id], b = a ? citeHolder(a, d.body) : d.body.querySelector('[data-block="' + id + '"]'); if (!b) return;
+      b = b.cloneNode(true);
       $$('.wn-cite, .wn-labels', b).forEach(function (x) { x.remove(); });
       out[id] = (b.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 200) || (b.querySelector('img') ? b.querySelectorAll('img').length + ' picture(s)' : b.querySelector('table') ? 'Table' : '');
     });

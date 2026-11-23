@@ -24,6 +24,7 @@ var Views = (function () {
     $$('[contenteditable]', c).forEach(function (x) { x.removeAttribute('contenteditable'); });
     $$('[data-wn-push]', c).forEach(function (x) { x.style.marginTop = x.getAttribute('data-wn-orig') || ''; });
     $$('.wn-slot', c).forEach(function (x) { x.remove(); });
+    quietCites(c);
     return c;
   }
 
@@ -60,7 +61,7 @@ var Views = (function () {
         tog.addEventListener('click', function () { var o = kids.hidden; kids.hidden = !o; tog.textContent = o ? '▾' : '▸'; tog.setAttribute('aria-expanded', String(o)); });
         var gen = !!hd.closest('.wn-gen');
         ul.appendChild(h('li', { class: 'ol-l' + lvl }, tog,
-          h('button', { type: 'button', class: 'linkish', onclick: function () { ov.close(); flash(hd); } }, hd.textContent.trim() || '(empty heading)'),
+          h('button', { type: 'button', class: 'linkish', onclick: function () { ov.close(); flash(hd); } }, ownText(hd).trim() || '(empty heading)'),
           gen ? h('span', { class: 'hint' }, ' generated') : h('span', { class: 'ol-acts' },
             h('button', { type: 'button', class: 'btn sm', disabled: lvl === 1, onclick: function () { relevel(hd, lvl - 1); draw(); } }, 'Promote'),
             h('button', { type: 'button', class: 'btn sm', disabled: lvl === 4, onclick: function () { relevel(hd, lvl + 1); draw(); } }, 'Demote')), kids));
@@ -136,7 +137,7 @@ var Views = (function () {
     } else {
       var heads = $$('h1,h2,h3,h4', Ed.el()).filter(function (x) { return !x.closest('.wn-toc'); });
       if (!heads.length) list.appendChild(h('li', { class: 'empty' }, 'Headings appear here. Apply Heading 1 to 4 from Home, Styles.'));
-      heads.forEach(function (hd) { list.appendChild(h('li', { class: 'nl' + hd.tagName[1] }, h('button', { type: 'button', class: 'linkish', onclick: function () { flash(hd); } }, hd.textContent.trim() || '(empty)'))); });
+      heads.forEach(function (hd) { list.appendChild(h('li', { class: 'nl' + hd.tagName[1] }, h('button', { type: 'button', class: 'linkish', onclick: function () { flash(hd); } }, ownText(hd).trim() || '(empty)'))); });
     }
     p.appendChild(list);
     var f = $('#navSearch'); if (f && q && document.activeElement !== f) { f.focus(); f.selectionStart = f.selectionEnd = f.value.length; }

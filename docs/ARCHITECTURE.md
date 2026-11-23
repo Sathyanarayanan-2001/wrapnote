@@ -1,6 +1,6 @@
 # Architecture
 
-Version 1.3.0 · 23/11/2026
+Version 1.4.0 · 23/11/2026
 
 ## Shape of the app
 
@@ -21,12 +21,13 @@ src/
     dashboard.js  dashboard figures
     pictures.js   grid slots, joining a grid, cell shape, OCR text clean-up
     refs.js       source references: checks, page ranges, citation text, suggestions, filters (1.3.0)
+    ribbonLayout.js  saved ribbon arrangement: check, repair, apply, move, store only differences (1.4.0)
     officeTemplate.js  built-in office template, heading numbers, Word-template audit and clean-up
     zip.js        ZIP writer and reader (CRC-32, stored or deflated parts)      } in word.js,
     ooxml.js      Word (.docx) writer: styles, numbering, fields, Office Math   } loaded on first use
   app/       browser code, loaded in file-name order inside one closure
     00-util  10-store  20-sync  30-pages  40-editor  45-intake  46-refs  47-ocr  48-spell
-    50-ribbon  55-insert  60-layout  70-review  80-views  90-io  91-word  99-main
+    50-ribbon  51-ribbon-custom  55-insert  60-layout  70-review  80-views  90-io  91-word  99-main
   word/      docx.js: page → Word model (in word.js, reaches the app through WN.app)
   spell/     worker.js: nspell + en-GB dictionary, bundled by esbuild into dist/spell/
   styles/    app.css (interface), doc.css (document, also used in exports)
@@ -114,9 +115,37 @@ Why this shape:
 4. **Pages are numbers.** A range is stored as two integers, so a filter can test overlap without parsing text, and a CSV shows "42-45" as text.
 5. **Checked at every door.** The form, backups, the WrapNote file and sync all pass through `validate` / `cleanMap`. A bad entry is dropped and named in a message; its note and document still import.
 
+### Placed tags (1.4.0)
+
+A reference made from a selection or the cursor gets its own key (`r` + random letters) and an anchor in the page body:
+
+```
+<span class="wn-cite" contenteditable="false" data-ref="r3kx9p2a" data-place="inline"></span>
+```
+
+1. **Still one copy.** The anchor stores only where the tag sits and whether it is `inline` (in the sentence, in brackets) or `line` (own line). Its words are drawn from `refs` on every open, undo and synced change and emptied before saving.
+2. **Old tags keep working.** A 1.3.0 reference (keyed by block id) has no anchor and is drawn at the end of its note, as before. Moving it creates an anchor with the same key, so `refs` and the Sources list do not change.
+3. **No duplicates.** On opening, an anchor whose key is unknown (pasted from another document) or already used (copied) is removed.
+4. **Preview.** The Sources text of a placed tag is the paragraph around it (`citeHolder`: list item, paragraph, quote, cell or note).
+5. **Allowed places.** Not in headings, inside another tag, or in text WrapNote generates (summary, table of contents, labels). The same rule serves the dialog, Move… and drag and drop.
+
 Each document's summary (`meta`) carries a flat list of its referenced notes (`refs: [{ b, source, heading, sub, section, pages, t, preview }]`). The Sources page and the suggestions read only these summaries, never whole documents.
 
 The `meta` store keeps a small summary of each document (title, dates, word count, action rows). Lists and the dashboard read only summaries, so pictures are never loaded just to draw a chart.
+
+## Ribbon arrangement (1.4.0)
+
+The ribbon is data (`TABS` in `50-ribbon.js`): tabs → groups → items, each with a stable id. Paths look like `home/font/bold`; a select is `sel:style`, a repeated command gets `#2`.
+
+Settings key `ribbonLayout` (in `localStorage`, prefix `wrapnote:`):
+
+```
+{ "v": 1, "tabs": [...], "groups": { "home": [...] }, "items": { "home/font": [...] }, "hidden": ["home/editing"], "qat": ["home/font/bold", ...] }
+```
+
+1. **Only differences are stored** (`compact`); the standard arrangement stores nothing, so a later version's new standard reaches the person.
+2. **Repaired on loading** (`normalize`): unknown ids are dropped, repeated ones kept once, commands added in a later version are placed next to their standard neighbour, a tab keeps at least one visible group, and the quick access bar holds at most 16 valid commands. Each repair is shown in a message.
+3. **One command, many copies.** A command on the quick access bar is a second copy of the ribbon button; pressed states and selects are updated on every copy. Element ids stay on the ribbon copy only.
 
 ## The page canvas
 

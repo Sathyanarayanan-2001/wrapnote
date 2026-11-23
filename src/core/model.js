@@ -10,7 +10,7 @@
   var refs = isNode ? require('./refs.js') : g.WN.refs;
   var esc = safe.escapeHtml;
 
-  var VERSION = '1.3.0';
+  var VERSION = '1.4.0';
   var MODES = { mom: 'Minutes and reports', book: 'Book and study notes', blank: 'Blank document' };
   var WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 

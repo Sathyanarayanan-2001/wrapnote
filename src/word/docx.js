@@ -133,9 +133,12 @@ var Docx = (function () {
       var cid = c.classList.contains('wn-comment') && c.getAttribute('data-cid');
       if (cid && self.comments.has(cid)) out.push({ t: 'commentStart', id: self.comments.get(cid) });
       if (c.classList.contains('wn-pagebreak')) { out.push({ t: 'pagebreak' }); return; }
-      // A citation tag shows on its own line under the note text (1.3.0).
-      if (c.classList.contains('wn-cite') && out.length) out.push({ t: 'br' });
+      // A citation tag shows on its own line under the note text (1.3.0); one placed inside the text stays there, in brackets (1.4.0).
+      var inlineCite = c.classList.contains('wn-cite') && c.getAttribute('data-place') === 'inline';
+      if (c.classList.contains('wn-cite') && !inlineCite && out.length) out.push({ t: 'br' });
+      if (inlineCite) out.push(self.textRun(' [', c, para, x));
       out = out.concat(self.runs(c, para, x));
+      if (inlineCite) out.push(self.textRun(']', c, para, x));
       if (cid && self.comments.has(cid)) out.push({ t: 'commentEnd', id: self.comments.get(cid) });
     });
     return out;

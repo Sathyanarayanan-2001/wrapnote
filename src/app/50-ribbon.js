@@ -7,50 +7,56 @@ var PT_PER_PX = 72 / 96; // explicit conversion: 1 CSS px = 0.75 pt
 
 var Ribbon = (function () {
   var active = 'home';
+  /* Default order (1.4.0): most-used first. On the Home tab the style list and the font come before Clipboard,
+   * because cut, copy and paste are mostly done with Ctrl+X, C and V. Every group has a stable id so a person's own
+   * order (saved by core/ribbonLayout.js) still fits after commands are added in later versions. */
   var TABS = [
     { id: 'home', label: 'Home', groups: [
-      { label: 'Clipboard', items: [['cut', 'Cut'], ['copy', 'Copy'], ['paste', 'Paste'], ['painter', 'Format painter', 'Copy formatting from the selection, then select text to apply it']] },
-      { label: 'Font', items: [{ sel: 'fontName' }, { sel: 'fontSize' }, ['grow', 'A⁺', 'Increase font size'], ['shrink', 'A⁻', 'Decrease font size'], ['bold', 'B', 'Bold (Ctrl+B)', 'b'], ['italic', 'I', 'Italic (Ctrl+I)', 'i'], ['underline', 'U', 'Underline (Ctrl+U)', 'u'],
-        ['subscript', 'x₂', 'Subscript'], ['superscript', 'x²', 'Superscript'], { sel: 'case' }, { color: 'hilite', label: 'Highlight', def: '#fde68a' }, { color: 'fore', label: 'Font colour', def: '#b91c1c' }, ['clearFormat', 'Clear', 'Clear formatting']] },
-      { label: 'Paragraph', items: [['ul', '• List', 'Bullets'], ['ol', '1. List', 'Numbering'], ['multilevel', '1.1 List', 'Multilevel list'], ['outdent', '⇤', 'Decrease indent'], ['indent', '⇥', 'Increase indent'],
-        ['alignLeft', 'Left', 'Align left'], ['alignCenter', 'Center', 'Center'], ['alignRight', 'Right', 'Align right'], ['alignJustify', 'Justify', 'Justify'], { sel: 'lineSpacing' }, { color: 'shade', label: 'Shading', def: '#ecfdf5' }, { sel: 'paraBorder' }] },
-      { label: 'Styles', items: [{ sel: 'style' }, ['customLabel', 'Custom label…', 'Insert a coloured label tag']] },
-      { label: 'Editing', items: [['find', 'Find', 'Find (Ctrl+F)'], ['replace', 'Replace', 'Replace (Ctrl+H)'], { sel: 'select' }, ['spell', 'Spell check', 'Turn the browser spelling underline on or off']] }
+      { id: 'styles', label: 'Styles', items: [{ sel: 'style' }, ['customLabel', 'Custom label…', 'Insert a coloured label tag']] },
+      { id: 'font', label: 'Font', items: [{ sel: 'fontName' }, { sel: 'fontSize' }, ['bold', 'B', 'Bold (Ctrl+B)', 'b'], ['italic', 'I', 'Italic (Ctrl+I)', 'i'], ['underline', 'U', 'Underline (Ctrl+U)', 'u'],
+        { color: 'hilite', label: 'Highlight', def: '#fde68a' }, { color: 'fore', label: 'Font colour', def: '#b91c1c' }, ['grow', 'A⁺', 'Increase font size'], ['shrink', 'A⁻', 'Decrease font size'],
+        ['subscript', 'x₂', 'Subscript'], ['superscript', 'x²', 'Superscript'], { sel: 'case' }, ['clearFormat', 'Clear', 'Clear formatting']] },
+      { id: 'paragraph', label: 'Paragraph', items: [['ul', '• List', 'Bullets'], ['ol', '1. List', 'Numbering'], ['alignLeft', 'Left', 'Align left'], ['alignCenter', 'Center', 'Center'], ['alignRight', 'Right', 'Align right'], ['alignJustify', 'Justify', 'Justify'],
+        ['outdent', '⇤', 'Decrease indent'], ['indent', '⇥', 'Increase indent'], ['multilevel', '1.1 List', 'Multilevel list'], { sel: 'lineSpacing' }, { color: 'shade', label: 'Shading', def: '#ecfdf5' }, { sel: 'paraBorder' }] },
+      { id: 'editing', label: 'Editing', items: [['find', 'Find', 'Find (Ctrl+F)'], ['replace', 'Replace', 'Replace (Ctrl+H)'], ['spell', 'Spell check', 'Turn the browser spelling underline on or off'], { sel: 'select' }] },
+      { id: 'clipboard', label: 'Clipboard', items: [['paste', 'Paste'], ['cut', 'Cut'], ['copy', 'Copy'], ['painter', 'Format painter', 'Copy formatting from the selection, then select text to apply it']] }
     ] },
     { id: 'insert', label: 'Insert', groups: [
-      { label: 'Pages', items: [{ sel: 'cover' }, ['blankPage', 'Blank page'], ['pageBreak', 'Page break', 'Ctrl+Enter']] },
-      { label: 'Tables & media', items: [['table', 'Table…'], { sel: 'tableTools' }, ['pictures', 'Pictures…'], ['shape', 'Shapes…'], ['chart', 'Chart…']] },
-      { label: 'Links & comments', items: [['link', 'Link…'], ['comment', 'New comment']] },
-      { label: 'Header & footer', items: [['headerFooter', 'Header…'], ['headerFooter', 'Footer…'], ['headerFooter', 'Page numbers…']] },
-      { label: 'Text & symbols', items: [{ sel: 'textBox' }, ['signature', 'Signature line…'], { sel: 'dateTime' }, ['equation', 'Equation…'], ['symbol', 'Symbol…']] }
+      { id: 'tables', label: 'Tables & media', items: [['table', 'Table…'], { sel: 'tableTools' }, ['pictures', 'Pictures…'], ['chart', 'Chart…'], ['shape', 'Shapes…']] },
+      { id: 'pages', label: 'Pages', items: [['pageBreak', 'Page break', 'Ctrl+Enter'], ['blankPage', 'Blank page'], { sel: 'cover' }] },
+      { id: 'text', label: 'Text & symbols', items: [['equation', 'Equation…'], ['symbol', 'Symbol…'], { sel: 'dateTime' }, { sel: 'textBox' }, ['signature', 'Signature line…']] },
+      { id: 'links', label: 'Links & comments', items: [['link', 'Link…'], ['comment', 'New comment']] },
+      { id: 'headerFooter', label: 'Header & footer', items: [['headerFooter', 'Header…'], ['headerFooter', 'Footer…'], ['headerFooter', 'Page numbers…']] }
     ] },
     { id: 'layout', label: 'Design & layout', groups: [
-      { label: 'Template', items: [{ sel: 'template' }] },
-      { label: 'Page background', items: [['pageBorders', 'Page borders…'], ['pageColorDlg', 'Page colour…', 'Choose a colour for every page'], ['watermark', 'Watermark…']] },
-      { label: 'Page setup', items: [{ sel: 'margins' }, { sel: 'orientation' }, { sel: 'size' }, { sel: 'columns' }, { sel: 'breaks' }] },
-      { label: 'Paragraph', items: [{ num: 'indentL', label: 'Indent left (mm)' }, { num: 'indentR', label: 'Indent right (mm)' }, { num: 'spBefore', label: 'Space before (pt)' }, { num: 'spAfter', label: 'Space after (pt)' }] },
-      { label: 'Arrange', items: [{ sel: 'wrap' }, { sel: 'position' }] }
+      { id: 'setup', label: 'Page setup', items: [{ sel: 'margins' }, { sel: 'orientation' }, { sel: 'size' }, { sel: 'columns' }, { sel: 'breaks' }] },
+      { id: 'paragraph', label: 'Paragraph', items: [{ num: 'indentL', label: 'Indent left (mm)' }, { num: 'indentR', label: 'Indent right (mm)' }, { num: 'spBefore', label: 'Space before (pt)' }, { num: 'spAfter', label: 'Space after (pt)' }] },
+      { id: 'background', label: 'Page background', items: [['pageColorDlg', 'Page colour…', 'Choose a colour for every page'], ['pageBorders', 'Page borders…'], ['watermark', 'Watermark…']] },
+      { id: 'template', label: 'Template', items: [{ sel: 'template' }] },
+      { id: 'arrange', label: 'Arrange', items: [{ sel: 'wrap' }, { sel: 'position' }] }
     ] },
     { id: 'refs', label: 'References', groups: [
-      { label: 'Table of contents', items: [['toc', 'Table of contents…'], ['tocUpdate', 'Update table']] },
-      { label: 'Captions', items: [['caption', 'Insert caption…'], ['tof', 'Table of figures…']] },
-      { label: 'Footnotes', items: [['footnote', 'Insert footnote…']] },
-      { label: 'Sources', items: [['srcRef', 'Source reference…'], ['srcPage', 'All sources']] }
+      { id: 'sources', label: 'Sources', items: [['srcRef', 'Source reference…'], ['srcPage', 'All sources']] },
+      { id: 'toc', label: 'Table of contents', items: [['toc', 'Table of contents…'], ['tocUpdate', 'Update table']] },
+      { id: 'captions', label: 'Captions', items: [['caption', 'Insert caption…'], ['tof', 'Table of figures…']] },
+      { id: 'footnotes', label: 'Footnotes', items: [['footnote', 'Insert footnote…']] }
     ] },
     { id: 'review', label: 'Review', groups: [
-      { label: 'Proofing', items: [['spelling', 'Spelling & grammar'], ['wordCount', 'Word count']] },
-      { label: 'Comments', items: [['commentsPane', 'Show comments'], ['comment', 'New comment'], ['commentDelete', 'Delete'], ['commentPrev', 'Previous'], ['commentNext', 'Next']] },
-      { label: 'Tracking', items: [['track', 'Track changes'], ['changesPane', 'Show changes'], ['changePrev', 'Previous'], ['changeNext', 'Next'], ['accept', 'Accept'], ['reject', 'Reject'], ['acceptAll', 'Accept all'], ['rejectAll', 'Reject all']] },
-      { label: 'Compare', items: [['saveRevision', 'Save revision'], ['compare', 'Compare…']] },
-      { label: 'Protect', items: [['readOnly', 'Read-only'], ['password', 'Password lock…']] }
+      { id: 'proofing', label: 'Proofing', items: [['spelling', 'Spelling & grammar'], ['wordCount', 'Word count']] },
+      { id: 'comments', label: 'Comments', items: [['comment', 'New comment'], ['commentsPane', 'Show comments'], ['commentPrev', 'Previous'], ['commentNext', 'Next'], ['commentDelete', 'Delete']] },
+      { id: 'tracking', label: 'Tracking', items: [['track', 'Track changes'], ['changesPane', 'Show changes'], ['changePrev', 'Previous'], ['changeNext', 'Next'], ['accept', 'Accept'], ['reject', 'Reject'], ['acceptAll', 'Accept all'], ['rejectAll', 'Reject all']] },
+      { id: 'compare', label: 'Compare', items: [['saveRevision', 'Save revision'], ['compare', 'Compare…']] },
+      { id: 'protect', label: 'Protect', items: [['readOnly', 'Read-only'], ['password', 'Password lock…']] }
     ] },
     { id: 'view', label: 'View', groups: [
-      { label: 'Views', items: [['printLayout', 'Print layout'], ['readMode', 'Read mode'], ['outline', 'Outline'], ['focus', 'Focus'], ['immersive', 'Immersive reader']] },
-      { label: 'Show', items: [['navPane', 'Navigation pane'], ['ruler', 'Ruler']] },
-      { label: 'Zoom', items: [{ zoom: true }, ['z100', '100%'], ['zOne', 'One page'], ['zMulti', 'Multiple pages'], ['zWidth', 'Page width']] },
-      { label: 'Window', items: [['newWindow', 'New window'], { sel: 'split' }, ['arrange', 'Arrange all'], ['sideBySide', 'View side by side…']] }
+      { id: 'zoom', label: 'Zoom', items: [{ zoom: true }, ['z100', '100%'], ['zWidth', 'Page width'], ['zOne', 'One page'], ['zMulti', 'Multiple pages']] },
+      { id: 'views', label: 'Views', items: [['printLayout', 'Print layout'], ['readMode', 'Read mode'], ['outline', 'Outline'], ['focus', 'Focus'], ['immersive', 'Immersive reader']] },
+      { id: 'show', label: 'Show', items: [['ruler', 'Ruler'], ['navPane', 'Navigation pane']] },
+      { id: 'window', label: 'Window', items: [{ sel: 'split' }, ['newWindow', 'New window'], ['arrange', 'Arrange all'], ['sideBySide', 'View side by side…']] }
     ] }
   ];
+  /** Quick access bar out of the box: the style list and the most used formatting, visible on every tab. */
+  var DEFAULT_QAT = ['home/styles/sel:style', 'home/font/bold', 'home/font/italic', 'home/font/underline', 'home/paragraph/ul', 'home/paragraph/ol', 'home/editing/find', 'refs/sources/srcRef'];
 
   var SELECTS = {
     fontName: { label: 'Font', options: function () { return FONTS.concat(Fonts.names()).map(function (f) { return [f, f]; }).concat([['__import', 'Import font (.ttf, .otf, .woff)…']]); } },
@@ -89,6 +95,90 @@ var Ribbon = (function () {
     if (Ed.doc) Layout.setZoom('auto');
   }
 
+  /* ---------- The person's arrangement (1.4.0) ---------- */
+  var RL = WN.ribbonLayout;
+  /** Stable id of an item inside its group: the command, or the kind of control and its name; repeats get #2, #3. */
+  function itemIds(items) {
+    var seen = {};
+    return items.map(function (it) {
+      var base = Array.isArray(it) ? it[0] : it.sel ? 'sel:' + it.sel : it.color ? 'color:' + it.color : it.num ? 'num:' + it.num : 'zoom';
+      seen[base] = (seen[base] || 0) + 1;
+      return seen[base] > 1 ? base + '#' + seen[base] : base;
+    });
+  }
+  function ids() { return TABS.map(function (t) { return { id: t.id, groups: t.groups.map(function (gr) { return { id: gr.id, items: itemIds(gr.items) }; }) }; }); }
+  /** The item spec at a path such as "home/font/bold", or null. */
+  function specAt(path) {
+    var p = String(path).split('/'), t = TABS.filter(function (x) { return x.id === p[0]; })[0];
+    var gr = t && t.groups.filter(function (x) { return x.id === p[1]; })[0];
+    if (!gr) return null;
+    var i = itemIds(gr.items).indexOf(p[2]);
+    return i >= 0 ? gr.items[i] : null;
+  }
+  /** A readable name for an item, for the Customise dialog and the quick access bar's tooltips. */
+  function labelOf(it) {
+    if (!it) return '';
+    if (Array.isArray(it)) return (it[1].length <= 3 || /^[•\d]/.test(it[1])) && it[2] ? it[2].replace(/ \(.*\)$/, '') + (it[1].length <= 3 ? ' (' + it[1] + ')' : '') : it[1];
+    if (it.sel) return SELECTS[it.sel].label;
+    if (it.color || it.num) return it.label;
+    return 'Zoom slider';
+  }
+  var layoutCache = null;
+  function layout() {
+    if (!layoutCache) {
+      var r = RL.normalize(settings.get('ribbonLayout', null), ids(), DEFAULT_QAT);
+      layoutCache = r.layout;
+      // A dropped entry is reported once, so a change between versions is never silent.
+      if (r.warnings.length) setTimeout(function () { toast('Your ribbon arrangement was adapted: ' + r.warnings[0] + (r.warnings.length > 1 ? ' (+' + (r.warnings.length - 1) + ' more)' : ''), 'error', 8000); }, 0);
+    }
+    return layoutCache;
+  }
+  function saveLayout(lay) {
+    var r = RL.normalize(lay, ids(), DEFAULT_QAT);
+    // The standard arrangement is not stored at all, so a later version's new standard reaches this person too.
+    settings.set('ribbonLayout', RL.isDefault(r.layout, ids(), DEFAULT_QAT) ? null : RL.compact(r.layout, ids(), DEFAULT_QAT));
+    layoutCache = r.layout;
+    build();
+    return r;
+  }
+  function resetLayout() { settings.set('ribbonLayout', null); layoutCache = null; build(); }
+  /** Short labels so the always-visible bar stays one line. */
+  var QAT_SHORT = { srcRef: 'Source…', find: 'Find', replace: 'Replace' };
+  function buildQat() {
+    var bar = $('#rbQat'); if (!bar) return;
+    bar.textContent = '';
+    layout().qat.forEach(function (pth) {
+      var it = specAt(pth); if (!it) return;
+      var spec = Array.isArray(it) && QAT_SHORT[it[0]] ? [it[0], QAT_SHORT[it[0]], it[2] || it[1], it[3]] : it;
+      var el = item(spec);
+      el.classList.add('qat-item');
+      // Ids belong to the ribbon's own copy (the zoom slider); a second element with the same id would break it.
+      [el].concat($$('[id]', el)).forEach(function (x) { if (x.id) x.removeAttribute('id'); });
+      el.setAttribute('data-path', pth);
+      if (Array.isArray(it)) { el.title = labelOf(it); el.setAttribute('aria-label', labelOf(it)); }
+      bar.appendChild(el);
+    });
+    bar.hidden = !bar.children.length;
+  }
+  /** Right-click (or long-press) on a ribbon command: add it to, or take it off, the quick access bar. */
+  var ctxMenu = null;
+  function closeCtx() { if (ctxMenu) { ctxMenu.remove(); ctxMenu = null; } }
+  function onContext(e) {
+    var el = e.target.closest('[data-path]'); if (!el) return;
+    e.preventDefault(); closeCtx();
+    var pth = el.getAttribute('data-path'), lay = layout(), inQat = lay.qat.indexOf(pth) >= 0;
+    var btn = function (label, fn) { return h('button', { type: 'button', role: 'menuitem', onclick: function () { closeCtx(); fn(); } }, label); };
+    ctxMenu = h('div', { class: 'spell-menu rb-menu', role: 'menu', 'aria-label': 'Options for ' + labelOf(specAt(pth)), style: { left: e.clientX + 'px', top: e.clientY + 'px' } },
+      inQat ? btn('Remove from quick access bar', function () { var l = JSON.parse(JSON.stringify(lay)); l.qat.splice(l.qat.indexOf(pth), 1); saveLayout(l); toast('Removed from the quick access bar.'); })
+        : btn('Add to quick access bar', function () { var l = JSON.parse(JSON.stringify(lay)); l.qat.push(pth); var r = saveLayout(l); toast(r.warnings.length ? r.warnings[0] : 'Added to the quick access bar.', r.warnings.length ? 'error' : undefined); }),
+      btn('Customise ribbon…', function () { RibbonCustom.open(); }));
+    document.body.appendChild(ctxMenu);
+    var first = ctxMenu.querySelector('button'); if (first) first.focus();
+    var rc = ctxMenu.getBoundingClientRect();
+    if (rc.right > innerWidth) ctxMenu.style.left = Math.max(4, innerWidth - rc.width - 4) + 'px';
+    if (rc.bottom > innerHeight) ctxMenu.style.top = Math.max(4, innerHeight - rc.height - 4) + 'px';
+  }
+
   function build() {
     var rb = $('#ribbon');
     if (build.first === undefined) {
@@ -98,12 +188,19 @@ var Ribbon = (function () {
       document.addEventListener('keydown', function (e) { if (e.ctrlKey && e.key === 'F1' && Pages.current() === 'edit') { e.preventDefault(); setCollapsed(!rb.classList.contains('collapsed')); } });
       $('#rbPanel').addEventListener('scroll', debounce(overflowArrows, 60));
       window.addEventListener('resize', debounce(overflowArrows, 150));
+      rb.addEventListener('contextmenu', onContext);
+      document.addEventListener('mousedown', function (e) { if (ctxMenu && !ctxMenu.contains(e.target)) closeCtx(); });
+      document.addEventListener('keydown', function (e) { if (ctxMenu && e.key === 'Escape') closeCtx(); });
     }
+    var lay = layout(), arranged = RL.apply(ids(), lay);
+    buildQat();
     rb.classList.toggle('simple', mode() === 'simple');
     rb.classList.toggle('full', mode() === 'full');
     var tabs = $('#ribbon .rb-tabs'), panel = $('#ribbon .rb-panel');
     tabs.textContent = '';
-    TABS.forEach(function (t) {
+    var byId = {}; TABS.forEach(function (t) { byId[t.id] = t; });
+    arranged.forEach(function (at) {
+      var t = byId[at.id];
       tabs.appendChild(h('button', { type: 'button', role: 'tab', id: 'rbt-' + t.id, 'aria-controls': 'rbPanel', 'aria-selected': String(t.id === active), 'aria-expanded': String(!rb.classList.contains('collapsed')), class: 'rb-tab' + (t.id === active ? ' active' : ''), onclick: function () {
         var collapsed = rb.classList.contains('collapsed');
         // Phone: tapping the open tab folds the panel away. Everywhere: choosing a tab while folded opens it.
@@ -113,16 +210,19 @@ var Ribbon = (function () {
       } }, t.label));
     });
     tabs.appendChild(h('span', { class: 'rb-ctl' },
+      h('button', { type: 'button', id: 'rbCustom', title: 'Change the order of tabs, groups and commands, and choose the quick access bar', onclick: function () { RibbonCustom.open(); } }, 'Customise…'),
       h('button', { type: 'button', id: 'rbMode', title: mode() === 'simple' ? 'Show every command with group names, on two rows' : 'Show each tab on one compact row', onclick: function () { settings.set('ribbonMode', mode() === 'simple' ? 'full' : 'simple'); build(); if (Ed.doc) Layout.setZoom('auto'); } }, mode() === 'simple' ? 'Full ribbon' : 'Simple ribbon'),
       h('button', { type: 'button', id: 'rbCollapse', 'aria-controls': 'rbPanel', 'aria-expanded': String(!rb.classList.contains('collapsed')), title: 'Show or hide the commands (Ctrl+F1)', onclick: function () { setCollapsed(!rb.classList.contains('collapsed')); } }, rb.classList.contains('collapsed') ? 'Show ribbon ▾' : 'Hide ribbon ▴')));
     panel.textContent = '';
     panel.setAttribute('aria-labelledby', 'rbt-' + active);
     panel.scrollLeft = 0;
-    var tab = TABS.filter(function (t) { return t.id === active; })[0];
-    tab.groups.forEach(function (g) {
-      var grp = h('div', { class: 'rb-group', role: 'group', 'aria-label': g.label, title: g.label });
+    var tab = byId[active], at = arranged.filter(function (x) { return x.id === active; })[0];
+    at.groups.forEach(function (ag) {
+      if (ag.hidden) return;
+      var g = tab.groups.filter(function (x) { return x.id === ag.id; })[0], gi = itemIds(g.items);
+      var grp = h('div', { class: 'rb-group', role: 'group', 'aria-label': g.label, title: g.label, 'data-group': tab.id + '/' + g.id });
       var items = h('div', { class: 'rb-items' });
-      g.items.forEach(function (it) { items.appendChild(item(it)); });
+      ag.items.forEach(function (iid) { var el = item(g.items[gi.indexOf(iid)]); el.setAttribute('data-path', tab.id + '/' + g.id + '/' + iid); items.appendChild(el); });
       grp.appendChild(items);
       grp.appendChild(h('div', { class: 'rb-glabel' }, g.label));
       panel.appendChild(grp);
@@ -196,26 +296,30 @@ var Ribbon = (function () {
   }
 
   function refreshState() {
-    if (!$('#ribbon') || active !== 'home' && active !== 'review' && active !== 'view') return;
+    if (!$('#ribbon')) return;
+    // The quick access bar can hold any command, so states are refreshed on every tab and for every copy.
     ['bold', 'italic', 'underline', 'subscript', 'superscript', 'insertUnorderedList', 'insertOrderedList', 'justifyLeft', 'justifyCenter', 'justifyRight', 'justifyFull'].forEach(function (c) {
       var map = { insertUnorderedList: 'ul', insertOrderedList: 'ol', justifyLeft: 'alignLeft', justifyCenter: 'alignCenter', justifyRight: 'alignRight', justifyFull: 'alignJustify' };
-      var b = $('#ribbon [data-cmd="' + (map[c] || c) + '"]');
-      if (b) { var on = false; try { on = document.queryCommandState(c); } catch (e) { /* unsupported */ } b.setAttribute('aria-pressed', String(on)); }
+      var bs = $$('#ribbon [data-cmd="' + (map[c] || c) + '"]');
+      if (bs.length) { var on = false; try { on = document.queryCommandState(c); } catch (e) { /* unsupported */ } bs.forEach(function (b) { b.setAttribute('aria-pressed', String(on)); }); }
     });
-    var tr = $('#ribbon [data-cmd="track"]'); if (tr) tr.setAttribute('aria-pressed', String(Review.tracking()));
-    var ro = $('#ribbon [data-cmd="readOnly"]'); if (ro && Ed.doc) ro.setAttribute('aria-pressed', String(Ed.doc.protect.mode === 'readonly'));
-    var sp = $('#ribbon [data-cmd="spell"]'); if (sp) sp.setAttribute('aria-pressed', String(Spell.enabled()));
-    var np = $('#ribbon [data-cmd="navPane"]'); if (np) np.setAttribute('aria-pressed', String(!$('#navPane').hidden));
-    var ru = $('#ribbon [data-cmd="ruler"]'); if (ru) ru.setAttribute('aria-pressed', String(Rulers.on()));
+    function press(cmd, on) { $$('#ribbon [data-cmd="' + cmd + '"]').forEach(function (b) { b.setAttribute('aria-pressed', String(on)); }); }
+    press('track', Review.tracking());
+    if (Ed.doc) press('readOnly', Ed.doc.protect.mode === 'readonly');
+    press('spell', Spell.enabled());
+    press('navPane', !$('#navPane').hidden);
+    press('ruler', Rulers.on());
     var r = window.getSelection();
     if (r.anchorNode && Ed.el().contains(r.anchorNode)) {
       var e = r.anchorNode.nodeType === 1 ? r.anchorNode : r.anchorNode.parentNode;
       var st = styleAt(e);
-      var ss = $('#ribbon [data-sel="style"]'); if (ss && ss.value !== st.key) ss.value = st.key;
+      $$('#ribbon [data-sel="style"]').forEach(function (ss) { if (ss.value !== st.key) ss.value = st.key; });
       var sb = $('#stStyle'); if (sb) sb.textContent = 'Style: ' + st.name;
       var cs = getComputedStyle(e);
-      var fs = $('#ribbon [data-sel="fontSize"]'); if (fs) { var pt = Math.round(parseFloat(cs.fontSize) * PT_PER_PX * 2) / 2; fs.value = String(pt); }
-      var fn = $('#ribbon [data-sel="fontName"]'); if (fn) { var fam = cs.fontFamily.split(',')[0].replace(/["']/g, '').trim(); if (Array.prototype.some.call(fn.options, function (o) { return o.value === fam; })) fn.value = fam; }
+      var pt = Math.round(parseFloat(cs.fontSize) * PT_PER_PX * 2) / 2;
+      $$('#ribbon [data-sel="fontSize"]').forEach(function (fs) { fs.value = String(pt); });
+      var fam = cs.fontFamily.split(',')[0].replace(/["']/g, '').trim();
+      $$('#ribbon [data-sel="fontName"]').forEach(function (fn) { if (Array.prototype.some.call(fn.options, function (o) { return o.value === fam; })) fn.value = fam; });
     }
   }
 
@@ -236,13 +340,14 @@ var Ribbon = (function () {
   }
 
   function refreshContext() {
-    var tp = $('#ribbon [data-sel="template"]'); if (tp && Ed.doc) tp.value = Ed.doc.template || 'personal';
-    var tt = $('#ribbon [data-sel="tableTools"]');
-    if (tt) { var c = Tables.currentCell(); tt.disabled = !c; tt.title = c ? 'Table tools' : 'Place the cursor in a table to use table tools'; }
-    ['wrap', 'position'].forEach(function (k) { var s = $('#ribbon [data-sel="' + k + '"]'); if (s) { s.disabled = !Ed.selectedObject(); s.title = Ed.selectedObject() ? '' : 'Select a picture, shape, chart or text box first'; } });
+    if (Ed.doc) $$('#ribbon [data-sel="template"]').forEach(function (tp) { tp.value = Ed.doc.template || 'personal'; });
+    var c = Tables.currentCell(), obj = Ed.selectedObject();
+    $$('#ribbon [data-sel="tableTools"]').forEach(function (tt) { tt.disabled = !c; tt.title = c ? 'Table tools' : 'Place the cursor in a table to use table tools'; });
+    ['wrap', 'position'].forEach(function (k) { $$('#ribbon [data-sel="' + k + '"]').forEach(function (s) { s.disabled = !obj; s.title = obj ? '' : 'Select a picture, shape, chart or text box first'; }); });
   }
 
-  return { build: build, refreshState: refreshState, refreshContext: refreshContext, run: run, TABS: TABS };
+  return { build: build, refreshState: refreshState, refreshContext: refreshContext, run: run, TABS: TABS, ids: ids, specAt: specAt, labelOf: labelOf,
+    layout: layout, saveLayout: saveLayout, resetLayout: resetLayout, DEFAULT_QAT: DEFAULT_QAT };
 })();
 
 /* ---------- Commands ---------- */
@@ -336,7 +441,12 @@ var CMD = {
   style: function (v) {
     Ed.restoreRange(); Ed.snapshot();
     var tag = { p: 'p', title: 'p', subtitle: 'p', h1: 'h1', h2: 'h2', h3: 'h3', h4: 'h4', quote: 'blockquote', label: 'p' }[v];
-    document.execCommand('formatBlock', false, tag);
+    // Chrome splits a paragraph around a non-editable span when it changes the block type, leaving
+    // <p><h1>text</h1><tag></p>. Source tags are made editable for that one command, then locked again.
+    var tags = $$('.wn-cite[contenteditable="false"]', Ed.el());
+    tags.forEach(function (t) { t.removeAttribute('contenteditable'); });
+    try { document.execCommand('formatBlock', false, tag); }
+    finally { tags.forEach(function (t) { t.setAttribute('contenteditable', 'false'); }); }
     var bl = Ed.selectedBlocks();
     bl.forEach(function (b) { b.classList.remove('wn-title', 'wn-subtitle', 'wn-label-style'); if (v === 'title') b.classList.add('wn-title'); if (v === 'subtitle') b.classList.add('wn-subtitle'); if (v === 'label') b.classList.add('wn-label-style'); if (!b.className) b.removeAttribute('class'); });
     Ed.changed();

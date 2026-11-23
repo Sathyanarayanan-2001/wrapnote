@@ -2,6 +2,23 @@
 
 All notable changes are listed here. Dates are day first. The format follows Keep a Changelog, and versions follow Semantic Versioning.
 
+## [1.4.0] - 23/11/2026
+
+### Fixed
+- **A source tag goes where you put it.** Selecting text and choosing **Source reference…** put the tag at the end of the paragraph, and it could not be moved. Now it goes right after the selected text, or, as you choose under **Where to show it**, at the cursor, at the end of the paragraph or on its own line under it. The last choice is offered again.
+- The full ribbon used two bands of groups on most tabs at 1366 px and left half of each empty. Each tab now fits in one band.
+
+### Added
+- **Move a source tag**: drag it, or click it, choose **Move…** and click the new place (or put the cursor there and press Enter; Esc cancels). Undo puts it back. The tag menu also offers Edit source…, Show on its own line / Show inside the text, and Remove source. Tags from 1.3.0 can be moved too.
+- A tag inside the text is shown small and in brackets, and stays inside the sentence in Word and Markdown exports.
+- **Quick access bar** left of the tab names: the style list, bold, italic, underline, bullets, numbering, Find and Source reference, visible on every tab and when the ribbon is hidden. Right-click (or press and hold) any command to add it or take it off; up to 16 commands.
+- **Customise…** (top right of the ribbon): put tabs, groups and commands in your own order with ▲ ▼, dragging or Alt+Up / Alt+Down; hide groups you never use; arrange the quick access bar. Save keeps it for next time; **Restore standard** brings back the standard order.
+
+### Changed
+- Groups are ordered by how often they are used: on Home, Styles and Font come first and Clipboard last; Insert starts with Tables and media; References with Sources.
+- A placed tag stores only its place in the document (an empty marker with the reference key); its words still come from the one stored reference. Documents and backups from 1.3.0 open unchanged.
+- Settings has a `ribbonLayout` entry holding only what differs from the standard arrangement; a damaged one is repaired on loading (unknown or repeated parts are dropped, with a message).
+
 ## [1.3.0] - 23/11/2026
 
 ### Added

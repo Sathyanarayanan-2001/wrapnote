@@ -122,7 +122,7 @@ var IO = (function () {
     var css = $('#doc-css').textContent;
     return '<!DOCTYPE html><html lang="en-IN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(title) + '</title><style>' + css + ' body{margin:0;background:#fff} .doc-content{max-width:180mm;margin:12mm auto;padding:0 8mm}</style></head><body><div class="doc-content">' + bodyHtml + '</div></body></html>';
   }
-  function cleanForExport() { var c = Ed.el().cloneNode(true); $$('[contenteditable]', c).forEach(function (x) { x.removeAttribute('contenteditable'); }); $$('.wn-chart-toggle, .wn-slot', c).forEach(function (x) { x.remove(); }); $$('[data-wn-push]', c).forEach(function (x) { x.style.marginTop = x.getAttribute('data-wn-orig') || ''; x.removeAttribute('data-wn-push'); x.removeAttribute('data-wn-orig'); }); return c; }
+  function cleanForExport() { var c = Ed.el().cloneNode(true); $$('[contenteditable]', c).forEach(function (x) { x.removeAttribute('contenteditable'); }); $$('.wn-chart-toggle, .wn-slot', c).forEach(function (x) { x.remove(); }); quietCites(c); $$('[data-wn-push]', c).forEach(function (x) { x.style.marginTop = x.getAttribute('data-wn-orig') || ''; x.removeAttribute('data-wn-push'); x.removeAttribute('data-wn-orig'); }); return c; }
   function footnotesHtml(c) {
     var fns = $$('.wn-fnref', c);
     return fns.length ? '<section class="wn-endnotes"><h2>Notes</h2><ol>' + fns.map(function (f) { return '<li>' + esc(f.getAttribute('data-text') || '') + '</li>'; }).join('') + '</ol></section>' : '';
@@ -157,7 +157,8 @@ var IO = (function () {
         if (t === 'A') return '[' + x + '](' + c.getAttribute('href') + ')';
         if (t === 'BR') return '  \n';
         if (t === 'IMG') return '![' + (c.alt || '') + '](embedded-image)';
-        if (c.classList.contains('wn-cite')) return '  \n*' + c.textContent.trim() + '*';
+        // A tag placed inside the text (1.4.0) stays inline, in brackets; others go on their own line.
+        if (c.classList.contains('wn-cite')) return c.getAttribute('data-place') === 'inline' ? ' *[' + c.textContent.trim() + ']*' : '  \n*' + c.textContent.trim() + '*';
         return x;
       }).join('');
     }
